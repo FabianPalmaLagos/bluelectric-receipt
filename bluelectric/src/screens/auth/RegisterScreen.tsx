@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { AuthNavigationProp } from '../../navigation/types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants/theme';
-import { registerUser } from '../../store/slices/authSlice';
+import { registerUser, clearError } from '../../store/slices/authSlice';
 import { RootState } from '../../store';
 import { UserRole } from '../../types';
 import { Picker } from '@react-native-picker/picker';
@@ -31,9 +31,39 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.WORKER);
+  const [isRegistering, setIsRegistering] = useState(false);
   
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+  
+  // Referencia para rastrear el estado de carga anterior
+  const prevLoadingRef = useRef(loading);
+
+  // Efecto para detectar cuando el registro se completa
+  useEffect(() => {
+    // Si estábamos registrando, loading cambió de true a false, y no hay error
+    if (isRegistering && prevLoadingRef.current && !loading && !error) {
+      // Mostrar alerta de éxito
+      Alert.alert(
+        "Registro Exitoso",
+        `Te has registrado correctamente como ${role === UserRole.ADMIN ? 'Administrador' : 'Trabajador'}. Por favor inicia sesión.`,
+        [
+          { 
+            text: "OK", 
+            onPress: () => {
+              // Limpiar el estado y navegar a la pantalla de inicio de sesión
+              dispatch(clearError());
+              navigation.navigate('Login');
+            }
+          }
+        ]
+      );
+      setIsRegistering(false);
+    }
+    
+    // Actualizar la referencia del estado de carga anterior
+    prevLoadingRef.current = loading;
+  }, [loading, error, isRegistering, role, navigation, dispatch]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,6 +91,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
     }
+
+    // Marcar que estamos intentando registrar
+    setIsRegistering(true);
 
     // Registrar usuario
     // @ts-ignore - Ignoramos el error de tipado por ahora

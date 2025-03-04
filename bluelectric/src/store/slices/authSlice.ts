@@ -70,10 +70,18 @@ export const registerUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      // Registrar usuario en Supabase Auth
+      // Registrar usuario en Supabase Auth con opciones específicas para móvil
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: 'bluelectric://login', // Esquema personalizado para la app
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            role: role,
+          }
+        }
       });
 
       if (error) throw error;
@@ -172,10 +180,9 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(registerUser.fulfilled, (state, action: PayloadAction<User>) => {
+    builder.addCase(registerUser.fulfilled, (state) => {
       state.loading = false;
-      state.user = action.payload;
-      state.isAuthenticated = true;
+      // No establecemos el usuario ni isAuthenticated aquí porque necesitamos confirmación por email
     });
     builder.addCase(registerUser.rejected, (state, action) => {
       state.loading = false;
@@ -214,4 +221,4 @@ const authSlice = createSlice({
 });
 
 export const { clearError } = authSlice.actions;
-export default authSlice.reducer; 
+export default authSlice.reducer;

@@ -14,5 +14,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // Usamos pkce para autenticación en aplicaciones móviles
+    flowType: 'pkce'
   },
-}); 
+});
+
+// Añadir listener para cambios de autenticación
+supabase.auth.onAuthStateChange((event) => {
+  console.log('Supabase auth event:', event);
+});
