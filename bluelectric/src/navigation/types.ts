@@ -63,7 +63,7 @@ export type ProjectStackParamList = {
   ProjectDetail: { projectId: string };
   AddProject: undefined;
   EditProject: { projectId: string };
-  ProjectCategories: { projectId: string };
+  ProjectCategories: { projectId: string; projectName: string };
 };
 
 export type ProjectNavigationProp<T extends keyof ProjectStackParamList> = StackNavigationProp<

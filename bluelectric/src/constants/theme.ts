@@ -19,11 +19,13 @@ export const COLORS = {
       primary: '#000000',
       secondary: '#555555',
       disabled: '#999999',
+      tertiary: '#AAAAAA',
     },
     dark: {
       primary: '#FFFFFF',
       secondary: '#CCCCCC',
       disabled: '#777777',
+      tertiary: '#888888',
     },
   },
   status: {
@@ -38,6 +40,21 @@ export const COLORS = {
     success: '#4CAF50',
     warning: '#FFC107',
     info: '#2196F3',
+  },
+  danger: {
+    dark: '#C62828',
+    medium: '#F44336',
+    light: '#FFCDD2',
+  },
+  grey: {
+    dark: '#424242',
+    medium: '#9E9E9E',
+    light: '#E0E0E0',
+  },
+  border: {
+    dark: '#424242',
+    medium: '#9E9E9E',
+    light: '#E0E0E0',
   },
 };
 

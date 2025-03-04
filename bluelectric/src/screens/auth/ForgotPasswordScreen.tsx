@@ -74,8 +74,8 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../assets/logo.png')}
             style={styles.logo}
+            source={require('../../assets/logo-light.png')}
             resizeMode="contain"
           />
           <Text style={styles.title}>Recuperar Contraseña</Text>
