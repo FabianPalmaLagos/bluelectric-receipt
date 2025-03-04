@@ -1,72 +1,52 @@
-// Configuración global para pruebas
-const mockImagePicker = require('./mocks/mockImagePicker').default;
+// Configuración global para Jest
+import '@testing-library/jest-native/extend-expect';
+import 'react-native-gesture-handler/jestSetup';
 
-// Mock para módulos nativos
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
-
-// Mock para expo-image-picker
-jest.mock('expo-image-picker', () => mockImagePicker);
-
-// Mock para iconos
-jest.mock('@expo/vector-icons', () => {
+// Mock para @react-navigation/native
+jest.mock('@react-navigation/native', () => {
   return {
-    Ionicons: (props) => {
-      return {
-        type: 'Ionicons',
-        props: { ...props, testID: `icon-${props.name}` }
-      };
-    },
+    useNavigation: jest.fn().mockReturnValue({
+      navigate: jest.fn(),
+      goBack: jest.fn(),
+    }),
+    useRoute: jest.fn().mockReturnValue({
+      params: {},
+    }),
+    useIsFocused: jest.fn().mockReturnValue(true),
   };
 });
 
-// Mock para DateTimePicker
-jest.mock('@react-native-community/datetimepicker', () => {
+// Mock para react-redux
+jest.mock('react-redux', () => {
+  const actualReactRedux = jest.requireActual('react-redux');
   return {
-    __esModule: true,
-    default: (props) => {
-      return {
-        type: 'DateTimePicker',
-        props
-      };
-    }
+    ...actualReactRedux,
+    useDispatch: jest.fn().mockReturnValue(jest.fn()),
+    useSelector: jest.fn().mockImplementation(selector => {
+      return selector({
+        auth: {
+          isLoading: false,
+          error: null,
+          user: null,
+        },
+      });
+    }),
   };
 });
 
-// Mock para Modal
-jest.mock('react-native', () => {
-  const reactNative = jest.requireActual('react-native');
-  
-  return {
-    ...reactNative,
-    Modal: (props) => {
-      const { visible, children, ...otherProps } = props;
-      return visible ? { type: 'Modal', props: otherProps, children } : null;
-    },
-    View: (props) => {
-      return {
-        type: 'View',
-        props
-      };
-    },
-    Text: (props) => {
-      return {
-        type: 'Text',
-        props
-      };
-    },
-    TouchableOpacity: (props) => {
-      return {
-        type: 'TouchableOpacity',
-        props
-      };
-    }
-  };
-});
+// Mock para assets
+jest.mock('../assets/images/logo.png', () => 'logo-mock');
 
-// Suprimir advertencias y errores de consola durante las pruebas
-global.console = {
-  ...console,
-  warn: jest.fn(),
-  error: jest.fn(),
-  log: jest.fn(),
-}; 
+// Configuración global
+global.React = require('react');
+
+// Suprimir advertencias de consola durante las pruebas
+console.error = jest.fn();
+console.warn = jest.fn();
+
+// Verificación de que el archivo de configuración se carga correctamente
+describe('Setup', () => {
+  it('setup file is loaded', () => {
+    expect(true).toBe(true);
+  });
+}); 

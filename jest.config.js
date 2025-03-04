@@ -1,27 +1,28 @@
 module.exports = {
-  preset: 'jest-expo',
+  preset: 'react-native',
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.js'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)'
-  ],
-  setupFilesAfterEnv: [
-    '@testing-library/jest-native/extend-expect',
-    '<rootDir>/src/__tests__/setup.js'
-  ],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
-  collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!**/node_modules/**',
-    '!**/vendor/**'
+    'node_modules/(?!(react-native|@react-native|react-native-.*|@react-navigation/.*|@react-native-community/.*)/)',
   ],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  },
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest'
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/src/__tests__/mocks/fileMock.js',
+    '\\.(css|less|scss|sass)$': '<rootDir>/src/__tests__/mocks/styleMock.js',
   },
   testEnvironment: 'node',
-  testPathIgnorePatterns: [
+  testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
+  },
+  collectCoverageFrom: [
+    'src/**/*.{js,jsx,ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/index.tsx',
+    '!src/serviceWorker.ts',
+  ],
+  coveragePathIgnorePatterns: [
     '/node_modules/',
-    '/bluelectric/'
-  ]
+    '/coverage/',
+  ],
+  verbose: true,
 }; 

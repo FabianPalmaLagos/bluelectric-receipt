@@ -172,7 +172,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.common.white} />
+              <ActivityIndicator color={COLORS.common.white} testID="loading-indicator" />
             ) : (
               <Text style={styles.registerButtonText}>Registrarse</Text>
             )}
