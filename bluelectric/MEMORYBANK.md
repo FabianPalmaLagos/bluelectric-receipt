@@ -7,7 +7,7 @@ BlueElectric es una aplicación móvil desarrollada con React Native y Expo que 
 ## Tecnologías Utilizadas
 
 - **Frontend**: React Native, Expo
-- **Gestión de Estado**: Redux Toolkit, Redux Persist
+- **Gestión de Estado**: Redux Toolkit, Redux Offline
 - **Backend**: Supabase (Autenticación, Base de datos, Almacenamiento)
 - **Navegación**: React Navigation
 - **UI/UX**: Componentes personalizados, Iconos de Expo Vector Icons
@@ -48,7 +48,14 @@ bluelectric/
 - **Inicio de Sesión**: Autenticación de usuarios mediante email y contraseña
 - **Registro**: Creación de nuevas cuentas de usuario
 - **Recuperación de Contraseña**: Proceso para restablecer contraseñas olvidadas
-- **Gestión de Sesiones**: Persistencia de sesiones mediante Redux Persist
+- **Gestión de Sesiones y Persistencia de Datos**:
+  - **Redux Toolkit**: Para la gestión centralizada del estado de la aplicación.
+  - **Redux Offline**: Implementación para gestionar la persistencia de datos y operaciones offline:
+    - Sincronización automática de datos cuando se recupera la conexión
+    - Manejo de operaciones fallidas con estrategias de reintento
+    - Almacenamiento local de datos importantes para trabajo sin conexión
+    - Interfaz de usuario adaptada que informa al usuario sobre el estado de sincronización
+    - Mejora la experiencia de usuario en áreas con conectividad limitada
 
 ### Gestión de Recibos
 
@@ -69,7 +76,7 @@ bluelectric/
 
 ### Funcionalidades Adicionales
 
-- **Modo Sin Conexión**: Indicador de estado de conexión y limitaciones
+- **Modo Sin Conexión**: Soporte completo para trabajar sin conexión con sincronización automática mediante Redux Offline
 - **Estadísticas**: Resumen financiero por proyecto y estado de recibos
 - **Filtros y Búsqueda**: Capacidad de filtrar y buscar recibos y proyectos
 
@@ -225,10 +232,64 @@ SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ## Consideraciones de Seguridad
 
-- Todas las solicitudes a Supabase están protegidas por políticas de seguridad RLS (Row Level Security)
-- Las imágenes de recibos se almacenan de forma segura en Supabase Storage
+### Seguridad
+
+**Medidas implementadas**:
+
+- Autenticación gestionada por Supabase Auth
+- Control de acceso basado en roles (Administrador/Usuario Regular)
+- Todas las conexiones con el backend se realizan a través de HTTPS
 - Las contraseñas nunca se almacenan en texto plano, se utilizan los mecanismos de hash de Supabase Auth
-- Los tokens de autenticación se almacenan de forma segura utilizando Redux Persist
+- Los tokens de autenticación se almacenan de forma segura utilizando Redux Offline
+
+## Notas de Desarrollo
+
+### Migración de Redux Persist a Redux Offline
+
+Durante el desarrollo del proyecto, se detectó un problema con el uso de `redux-persist`, ya que fue marcado como "no mantenido" por `expo-doctor`. Para solucionar esto y mejorar la experiencia offline, se realizó la siguiente migración:
+
+1. **Cambios en las dependencias**:
+   - Se desinstaló redux-persist
+   - Se instaló @redux-offline/redux-offline
+
+2. **Modificaciones en la configuración del store**:
+   ```typescript
+   // Archivo: src/store/index.ts
+   // Configuración con redux-offline
+   import { offline } from '@redux-offline/redux-offline';
+   import offlineConfig from '@redux-offline/redux-offline/lib/defaults';
+   
+   // Configuración personalizada
+   const offlineCustomConfig = {
+     ...offlineConfig,
+     persistOptions: {
+       key: 'root',
+       storage: AsyncStorage,
+       whitelist: ['auth', 'receipts'],
+     },
+   };
+   
+   export const store = configureStore({
+     reducer: rootReducer,
+     middleware: (getDefaultMiddleware) =>
+       getDefaultMiddleware({
+         serializableCheck: false,
+       }),
+     enhancers: [offline(offlineCustomConfig)],
+   });
+   ```
+
+3. **Adaptación de acciones para soporte offline**:
+   - Las acciones thunk se reformatearon para usar el patrón de redux-offline
+   - Se implementaron acciones de `commit` y `rollback` para manejar éxito/fracaso de operaciones
+   - Se añadieron campos de estado a las interfaces para controlar el estado de sincronización
+
+4. **Mejoras en la interfaz de usuario**:
+   - Indicadores de estado de sincronización
+   - Mensajes adaptados según el estado de conexión
+   - Confirmación visual para acciones completadas offline
+
+Esta migración proporciona ventajas importantes como la sincronización automática cuando se recupera la conexión, mejor manejo de errores, y una experiencia de usuario más fluida en condiciones de conectividad limitada.
 
 ## Contribución al Proyecto
 

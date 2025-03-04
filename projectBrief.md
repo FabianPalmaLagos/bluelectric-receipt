@@ -30,7 +30,7 @@ El objetivo es desarrollar una **aplicación móvil de gestión de gastos empres
 - **Frontend:** React Native  
 - **Backend & Base de datos:** Supabase (incluye Supabase Auth para la autenticación)  
 - **Notificaciones push:** Firebase Cloud Messaging  
-- **Gestión de estado y persistencia offline:** Redux Persist  
+- **Gestión de estado y persistencia offline:** Redux Offline  
 - **OCR:** Integración con librerías compatibles (p. ej., `react-native-text-recognition`, `Tesseract.js`)
 
 ---
@@ -53,7 +53,7 @@ El objetivo es desarrollar una **aplicación móvil de gestión de gastos empres
 ---
 
 ## 5. Diseño UI/UX
-- **Carga de recibos intuitiva:** Botón flotante “+” con ícono de cámara.  
+- **Carga de recibos intuitiva:** Botón flotante "+" con ícono de cámara.  
 - **Vista de recibos:** Uso de tarjetas (cards) o cuadrículas (grids) para presentar el `thumbnail`, la fecha, el monto, el estado, etc.  
 - **Filtros rápidos:** Tabs o menús desplegables para cambiar de proyecto y ver los recibos asociados.  
 - **Modo oscuro:** Implementación de una interfaz que soporte el **dark mode**.  

@@ -146,7 +146,7 @@ const AddReceiptScreen: React.FC<AddReceiptScreenProps> = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
-    if (isOffline) {
+    if (!navigator.onLine && !isOffline) {
       Alert.alert('Error', 'No puedes añadir recibos en modo sin conexión');
       return;
     }
@@ -158,25 +158,29 @@ const AddReceiptScreen: React.FC<AddReceiptScreenProps> = ({ navigation }) => {
     try {
       setIsSubmitting(true);
 
-      // @ts-ignore - Ignoramos el error de tipado por ahora
-      await dispatch(addReceipt({
+      // Usamos la nueva implementación de redux-offline
+      dispatch(addReceipt({
         merchant,
         amount: parseFloat(amount),
         date: date.toISOString(),
         description,
         projectId,
+        categoryId: category?.id,
         imageUri: image,
         userId: user?.id,
-      })).unwrap();
+      }));
 
+      // Mostramos un mensaje diferente según el estado de conexión
       Alert.alert(
-        'Éxito',
-        'Recibo añadido correctamente',
+        'Recibo guardado',
+        navigator.onLine 
+          ? 'El recibo ha sido guardado exitosamente.' 
+          : 'El recibo ha sido guardado localmente y se sincronizará cuando haya conexión.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
-      console.error('Error al añadir recibo:', error);
-      Alert.alert('Error', 'No se pudo añadir el recibo. Inténtalo de nuevo.');
+      console.error('Error al guardar el recibo:', error);
+      Alert.alert('Error', 'Ha ocurrido un error al guardar el recibo. Por favor, inténtalo de nuevo.');
     } finally {
       setIsSubmitting(false);
     }

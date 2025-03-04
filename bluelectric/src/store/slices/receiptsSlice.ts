@@ -121,12 +121,22 @@ export const fetchReceiptById = createAsyncThunk(
   }
 );
 
-export const createReceipt = createAsyncThunk(
-  'receipts/createReceipt',
-  async (receipt: Omit<Receipt, 'id' | 'createdAt' | 'updatedAt'>, { rejectWithValue }) => {
-    try {
-      const { data, error } = await supabase.from('receipts').insert([
-        {
+// Acción para crear un recibo adaptada a redux-offline
+export const createReceipt = (receipt: Omit<Receipt, 'id'>) => ({
+  type: 'receipts/createReceipt',
+  payload: receipt,
+  meta: {
+    offline: {
+      // Lo que se hace cuando estamos desconectados
+      effect: {
+        url: `${process.env.SUPABASE_URL}/rest/v1/receipts`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': process.env.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
           user_id: receipt.userId,
           project_id: receipt.projectId,
           category_id: receipt.categoryId,
@@ -136,33 +146,56 @@ export const createReceipt = createAsyncThunk(
           description: receipt.description,
           image_url: receipt.imageUrl,
           status: receipt.status,
-          rejection_reason: receipt.rejectionReason,
+          rejection_reason: receipt.rejectionReason || null,
+        }),
+      },
+      // Lo que se hace cuando la operación online tiene éxito
+      commit: { type: 'receipts/createReceiptSuccess', meta: { receipt } },
+      // Lo que se hace cuando la operación online falla
+      rollback: { type: 'receipts/createReceiptFailure', meta: { receipt } },
+    },
+  },
+});
+
+// Acción para añadir un recibo adaptada a redux-offline
+export const addReceipt = (receiptData: any) => ({
+  type: 'receipts/addReceipt',
+  payload: {
+    ...receiptData,
+    tempId: `temp-${Date.now()}`, // Generamos un ID temporal
+    isOffline: false, // Por defecto no está en modo offline
+    status: 'pending', // Estado inicial
+  },
+  meta: {
+    offline: {
+      // Lo que se hace cuando estamos desconectados
+      effect: {
+        url: `${process.env.SUPABASE_URL}/rest/v1/receipts`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'apikey': process.env.SUPABASE_ANON_KEY,
         },
-      ]).select();
-
-      if (error) throw error;
-
-      // Transformar los datos de snake_case a camelCase
-      return {
-        id: data[0].id,
-        userId: data[0].user_id,
-        projectId: data[0].project_id,
-        categoryId: data[0].category_id,
-        amount: data[0].amount,
-        date: data[0].date,
-        merchant: data[0].merchant,
-        description: data[0].description,
-        imageUrl: data[0].image_url,
-        status: data[0].status,
-        rejectionReason: data[0].rejection_reason,
-        createdAt: data[0].created_at,
-        updatedAt: data[0].updated_at,
-      } as Receipt;
-    } catch (error: any) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
+        body: JSON.stringify({
+          user_id: receiptData.userId,
+          project_id: receiptData.projectId,
+          category_id: receiptData.categoryId || null,
+          amount: receiptData.amount,
+          date: receiptData.date,
+          merchant: receiptData.merchant,
+          description: receiptData.description,
+          image_url: receiptData.imageUri || null,
+          status: 'pending',
+        }),
+      },
+      // Lo que se hace cuando la operación online tiene éxito
+      commit: { type: 'receipts/addReceiptSuccess', meta: { receiptData } },
+      // Lo que se hace cuando la operación online falla
+      rollback: { type: 'receipts/addReceiptFailure', meta: { receiptData } },
+    },
+  },
+});
 
 export const updateReceipt = createAsyncThunk(
   'receipts/updateReceipt',
@@ -291,6 +324,44 @@ const receiptsSlice = createSlice({
     clearPendingReceipts: (state) => {
       state.pendingReceipts = [];
     },
+    // Nuevos reducers para redux-offline
+    createReceiptSuccess: (state, action) => {
+      // Actualizar el estado después de que se guarde exitosamente el recibo en el servidor
+      const index = state.pendingReceipts.findIndex(
+        receipt => receipt.tempId === action.meta.receipt.tempId
+      );
+      if (index !== -1) {
+        state.pendingReceipts.splice(index, 1);
+      }
+      state.loading = false;
+      state.error = null;
+    },
+    createReceiptFailure: (state, action) => {
+      // Manejar el error cuando falla la sincronización con el servidor
+      state.error = 'Error al crear el recibo en el servidor. Se guardó localmente.';
+      state.loading = false;
+    },
+    addReceiptSuccess: (state, action) => {
+      // Actualizar el estado después de que se guarde exitosamente el recibo en el servidor
+      const index = state.pendingReceipts.findIndex(
+        receipt => receipt.tempId === action.meta.receiptData.tempId
+      );
+      if (index !== -1) {
+        state.pendingReceipts.splice(index, 1);
+      }
+      state.loading = false;
+      state.error = null;
+    },
+    addReceiptFailure: (state, action) => {
+      // Guardar el recibo en pendingReceipts para sincronizar más tarde
+      const receipt = {
+        ...action.meta.receiptData,
+        isOffline: true,
+      };
+      state.pendingReceipts.push(receipt as Receipt);
+      state.error = 'Error al crear el recibo en el servidor. Se guardó localmente.';
+      state.loading = false;
+    },
   },
   extraReducers: (builder) => {
     // Fetch Receipts
@@ -331,21 +402,6 @@ const receiptsSlice = createSlice({
       state.currentReceipt = action.payload;
     });
     builder.addCase(fetchReceiptById.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Create Receipt
-    builder.addCase(createReceipt.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(createReceipt.fulfilled, (state, action: PayloadAction<Receipt>) => {
-      state.loading = false;
-      state.receipts = [action.payload, ...state.receipts];
-      state.currentReceipt = action.payload;
-    });
-    builder.addCase(createReceipt.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });

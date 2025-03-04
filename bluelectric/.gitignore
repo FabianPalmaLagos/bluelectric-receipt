@@ -107,3 +107,13 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase
+**/supabase/.branches/
+**/supabase/.temp/
+**/supabase/seed.sql
+*.dump
+*.dump.sql
+database_dump.sql
+users_dump.sql
+.supabase/

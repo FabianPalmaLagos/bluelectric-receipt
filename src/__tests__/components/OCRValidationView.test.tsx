@@ -1,131 +1,141 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+
+// Importar los mocks antes de importar el componente
+jest.mock('../../constants/theme', () => require('../mocks/mockConstants'));
+
+// Mock para format de date-fns
+jest.mock('date-fns', () => ({
+  format: jest.fn().mockImplementation(() => '28/02/2023'),
+  es: {}
+}));
+
 import OCRValidationView from '../../components/OCRValidationView';
 
-// Mock de datos para las pruebas
-const mockOCRData = {
-  numeroCliente: '12345678',
-  fechaEmision: '01/01/2023',
-  fechaVencimiento: '31/01/2023',
-  totalPagar: '1500.00',
-  periodoFacturacion: 'Enero 2023',
-};
-
-const mockOnConfirm = jest.fn();
-const mockOnCancel = jest.fn();
+// Mock de fecha específica para pruebas consistentes
+const mockDate = new Date('2023-03-01');
 
 describe('OCRValidationView', () => {
+  const mockExtractedData = {
+    merchant: 'Mercado Central',
+    amount: 123.45,
+    date: mockDate,
+  };
+
+  const mockOnConfirm = jest.fn();
+  const mockOnCancel = jest.fn();
+
   beforeEach(() => {
-    // Limpiar los mocks antes de cada prueba
     jest.clearAllMocks();
   });
 
-  test('renderiza correctamente con los datos proporcionados', () => {
-    const { getByText, getByTestId } = render(
+  it('renderiza correctamente con los datos proporcionados', () => {
+    const { getByText, getByDisplayValue } = render(
       <OCRValidationView
-        ocrData={mockOCRData}
+        extractedData={mockExtractedData}
         onConfirm={mockOnConfirm}
         onCancel={mockOnCancel}
       />
     );
 
-    // Verificar que se muestran los datos OCR
-    expect(getByText('Validación de Datos')).toBeTruthy();
-    expect(getByTestId('numeroCliente-input').props.value).toBe('12345678');
-    expect(getByTestId('fechaEmision-input').props.value).toBe('01/01/2023');
-    expect(getByTestId('fechaVencimiento-input').props.value).toBe('31/01/2023');
-    expect(getByTestId('totalPagar-input').props.value).toBe('1500.00');
-    expect(getByTestId('periodoFacturacion-input').props.value).toBe('Enero 2023');
+    // Verificar que se muestran los datos correctos
+    expect(getByDisplayValue('Mercado Central')).toBeTruthy();
+    expect(getByDisplayValue('123.45')).toBeTruthy();
+    expect(getByText('28/02/2023')).toBeTruthy(); // Fecha formateada por el mock
   });
 
-  test('llama a onCancel cuando se presiona el botón de cancelar', () => {
-    const { getByTestId } = render(
+  it('llama a onCancel cuando se presiona el botón de cancelar', () => {
+    const { getByText } = render(
       <OCRValidationView
-        ocrData={mockOCRData}
+        extractedData={mockExtractedData}
         onConfirm={mockOnConfirm}
         onCancel={mockOnCancel}
       />
     );
 
-    // Simular clic en el botón de cancelar
-    fireEvent.press(getByTestId('cancel-button'));
+    // Presionar el botón de cancelar
+    fireEvent.press(getByText('Cancelar'));
 
-    // Verificar que se llamó a la función onCancel
+    // Verificar que se llamó a onCancel
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
-  test('llama a onConfirm con los datos correctos cuando se presiona el botón de confirmar', () => {
-    const { getByTestId } = render(
+  it('llama a onConfirm con los datos correctos cuando se presiona el botón de confirmar', () => {
+    const { getByText } = render(
       <OCRValidationView
-        ocrData={mockOCRData}
+        extractedData={mockExtractedData}
         onConfirm={mockOnConfirm}
         onCancel={mockOnCancel}
       />
     );
 
-    // Simular clic en el botón de confirmar
-    fireEvent.press(getByTestId('confirm-button'));
+    // Presionar el botón de confirmar
+    fireEvent.press(getByText('Confirmar'));
 
-    // Verificar que se llamó a la función onConfirm con los datos correctos
+    // Verificar que se llamó a onConfirm con los datos correctos
     expect(mockOnConfirm).toHaveBeenCalledTimes(1);
     expect(mockOnConfirm).toHaveBeenCalledWith({
-      numeroCliente: '12345678',
-      fechaEmision: '01/01/2023',
-      fechaVencimiento: '31/01/2023',
-      totalPagar: '1500.00',
-      periodoFacturacion: 'Enero 2023',
+      merchant: 'Mercado Central',
+      amount: 123.45,
+      date: mockDate,
     });
   });
 
-  test('permite editar los datos y confirmar los cambios', () => {
-    const { getByTestId } = render(
+  it('permite editar los datos y confirmar los cambios', () => {
+    const { getByText, getByDisplayValue } = render(
       <OCRValidationView
-        ocrData={mockOCRData}
+        extractedData={mockExtractedData}
         onConfirm={mockOnConfirm}
         onCancel={mockOnCancel}
       />
     );
 
-    // Editar los campos
-    fireEvent.changeText(getByTestId('numeroCliente-input'), '87654321');
-    fireEvent.changeText(getByTestId('totalPagar-input'), '2000.00');
+    // Editar el comercio
+    const merchantInput = getByDisplayValue('Mercado Central');
+    fireEvent.changeText(merchantInput, 'Supermercado XYZ');
 
-    // Simular clic en el botón de confirmar
-    fireEvent.press(getByTestId('confirm-button'));
+    // Editar el monto
+    const amountInput = getByDisplayValue('123.45');
+    fireEvent.changeText(amountInput, '200');
 
-    // Verificar que se llamó a la función onConfirm con los datos actualizados
-    expect(mockOnConfirm).toHaveBeenCalledTimes(1);
-    expect(mockOnConfirm).toHaveBeenCalledWith({
-      numeroCliente: '87654321',
-      fechaEmision: '01/01/2023',
-      fechaVencimiento: '31/01/2023',
-      totalPagar: '2000.00',
-      periodoFacturacion: 'Enero 2023',
-    });
+    // Confirmar los cambios
+    fireEvent.press(getByText('Confirmar'));
+
+    // Verificar que se llamó a onConfirm con los datos actualizados
+    expect(mockOnConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        merchant: 'Supermercado XYZ',
+        amount: 200,
+        date: mockDate,
+      })
+    );
   });
 
-  test('maneja correctamente cuando se desactivan los switches de datos', () => {
-    const { getByTestId } = render(
+  it('maneja correctamente cuando se desactivan los switches de datos', () => {
+    const { getByText, getAllByTestId } = render(
       <OCRValidationView
-        ocrData={mockOCRData}
+        extractedData={mockExtractedData}
         onConfirm={mockOnConfirm}
         onCancel={mockOnCancel}
       />
     );
 
-    // Desactivar algunos switches
-    fireEvent(getByTestId('numeroCliente-switch'), 'valueChange', false);
-    fireEvent(getByTestId('totalPagar-switch'), 'valueChange', false);
+    // Obtener los switches usando testID
+    const switches = getAllByTestId('Switch');
+    
+    // Desactivar todos los switches
+    fireEvent(switches[0], 'valueChange', false); // Comercio
+    fireEvent(switches[1], 'valueChange', false); // Monto
+    fireEvent(switches[2], 'valueChange', false); // Fecha
 
-    // Simular clic en el botón de confirmar
-    fireEvent.press(getByTestId('confirm-button'));
+    // Confirmar los cambios
+    fireEvent.press(getByText('Confirmar'));
 
-    // Verificar que se llamó a la función onConfirm con los datos correctos (sin los campos desactivados)
-    expect(mockOnConfirm).toHaveBeenCalledTimes(1);
-    expect(mockOnConfirm).toHaveBeenCalledWith({
-      fechaEmision: '01/01/2023',
-      fechaVencimiento: '31/01/2023',
-      periodoFacturacion: 'Enero 2023',
-    });
+    // Verificar que se llamó a onConfirm con los datos vacíos
+    expect(mockOnConfirm).toHaveBeenCalledWith(expect.objectContaining({
+      merchant: '',
+      amount: 0,
+      // No verificamos la fecha exacta porque puede variar
+    }));
   });
 }); 

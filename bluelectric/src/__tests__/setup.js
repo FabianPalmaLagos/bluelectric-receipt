@@ -1,3 +1,6 @@
+// Importar regenerator-runtime para soporte de async/await
+import 'regenerator-runtime/runtime';
+
 // Configuración global para pruebas
 
 // Mock para @react-native-community/datetimepicker

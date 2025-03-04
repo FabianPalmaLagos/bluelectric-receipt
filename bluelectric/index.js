@@ -1,3 +1,5 @@
+// Importar regenerator-runtime primero para evitar problemas con async/await
+import 'regenerator-runtime/runtime';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
