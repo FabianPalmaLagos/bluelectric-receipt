@@ -1,0 +1,86 @@
+{
+  "name": "bluelectric-receipt",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.24.0",
+    "@react-native-community/netinfo": "^11.4.1",
+    "@react-navigation/bottom-tabs": "^7.2.1",
+    "@react-navigation/native": "^7.0.15",
+    "@react-navigation/stack": "^7.1.2",
+    "@reduxjs/toolkit": "^2.6.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "expo": "~52.0.37",
+    "expo-file-system": "^18.0.11",
+    "expo-image-manipulator": "^13.0.6",
+    "expo-status-bar": "~2.0.1",
+    "firebase": "^11.4.0",
+    "react": "18.3.1",
+    "react-native": "0.76.7",
+    "react-native-gesture-handler": "^2.24.0",
+    "react-native-image-picker": "^8.2.0",
+    "react-native-reanimated": "^3.17.1",
+    "react-native-safe-area-context": "^5.2.0",
+    "react-native-screens": "^4.9.1",
+    "react-native-text-recognition": "^1.0.2",
+    "react-native-vision-camera": "^4.6.4",
+    "react-redux": "^9.2.0",
+    "redux": "^5.0.1",
+    "redux-persist": "^6.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.9",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "@babel/preset-typescript": "^7.26.0",
+    "@react-native-community/datetimepicker": "^8.3.0",
+    "@react-native-picker/picker": "^2.11.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.1.0",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^18.3.18",
+    "@types/react-native": "^0.73.0",
+    "babel-jest": "^29.7.0",
+    "date-fns": "^4.1.0",
+    "expo-image-picker": "^16.0.6",
+    "jest": "^29.7.0",
+    "jest-expo": "^52.0.5",
+    "react-test-renderer": "^18.3.1",
+    "redux-mock-store": "^1.5.5",
+    "typescript": "^5.8.2"
+  },
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
+    ],
+    "setupFilesAfterEnv": [
+      "@testing-library/jest-native/extend-expect",
+      "<rootDir>/src/__tests__/setup.js"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!**/node_modules/**",
+      "!**/vendor/**"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  }
+}
