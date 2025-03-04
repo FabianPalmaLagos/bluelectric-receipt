@@ -7,22 +7,62 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "bluelectric",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bluelectric.app",
+      "associatedDomains": [
+        "applinks:bluelectric.app",
+        "applinks:izcuyqehwvnstcaqfmod.supabase.co"
+      ]
     },
     "android": {
+      "package": "com.bluelectric.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "bluelectric",
+              "host": "*"
+            },
+            {
+              "scheme": "https",
+              "host": "*.supabase.co",
+              "pathPrefix": "/auth/v1/callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "scheme": "bluelectric",
+    "extra": {
+      "linking": {
+        "prefixes": [
+          "bluelectric://",
+          "https://bluelectric.app",
+          "https://*.supabase.co/auth/v1/callback"
+        ],
+        "config": {
+          "screens": {
+            "*": "*"
+          }
+        }
+      }
     }
   }
 }

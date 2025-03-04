@@ -1,53 +1,119 @@
 import React, { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from './src/store';
+import { Provider, useSelector } from 'react-redux';
+import { store } from './src/store';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from './src/store';
-import { getCurrentUser } from './src/store/slices/authSlice';
-import { setOfflineStatus } from './src/store/slices/uiSlice';
-import NetInfo from '@react-native-community/netinfo';
+import { Linking } from 'react-native';
+import { supabase } from './src/api/supabase';
+import type { RootState } from './src/store';
+import { AuthStackParamList } from './src/navigation/types';
 
-// Componente para manejar la lógica de la aplicación
-const AppContent = () => {
-  const dispatch = useDispatch();
-  const { theme } = useSelector((state: RootState) => state.ui);
+function AppContent() {
+  const userEmail = useSelector((state: RootState) => state.auth.user?.email);
 
   useEffect(() => {
-    // Verificar si hay un usuario autenticado al iniciar la aplicación
-    // @ts-ignore - Ignoramos el error de tipado por ahora
-    dispatch(getCurrentUser());
+    // Función para extraer el token de la URL
+    const extractTokenFromUrl = (url: string) => {
+      try {
+        const regex = /[?&]access_token=([^&]+)/;
+        const match = url.match(regex);
+        return match ? match[1] : null;
+      } catch (error) {
+        console.error('Error extrayendo token:', error);
+        return null;
+      }
+    };
 
-    // Configurar el listener para el estado de la conexión
-    const unsubscribe = NetInfo.addEventListener(state => {
-      // @ts-ignore - Ignoramos el error de tipado por ahora
-      dispatch(setOfflineStatus(!state.isConnected));
+    // Función para manejar la URL entrante
+    const handleDeepLink = async (url: string) => {
+      try {
+        console.log('URL recibida:', url);
+        const token = extractTokenFromUrl(url);
+        
+        if (token) {
+          const { error } = await supabase.auth.verifyOtp({
+            email: userEmail || '',
+            token,
+            type: 'email'
+          });
+
+          if (error) {
+            console.error('Error al verificar email:', error.message);
+          } else {
+            console.log('Email verificado exitosamente');
+          }
+        }
+      } catch (error) {
+        console.error('Error procesando deep link:', error);
+      }
+    };
+
+    // Manejar la URL inicial si la app fue abierta desde el enlace
+    const getInitialURL = async () => {
+      try {
+        const url = await Linking.getInitialURL();
+        if (url) {
+          console.log('URL inicial:', url);
+          handleDeepLink(url);
+        }
+      } catch (error) {
+        console.error('Error obteniendo URL inicial:', error);
+      }
+    };
+
+    // Configurar el listener para URLs entrantes
+    const subscription = Linking.addEventListener('url', (event: { url: string }) => {
+      console.log('Nueva URL recibida:', event.url);
+      handleDeepLink(event.url);
     });
 
+    // Verificar URL inicial
+    getInitialURL();
+
+    // Limpiar el listener cuando el componente se desmonte
     return () => {
-      // Limpiar el listener cuando el componente se desmonte
-      unsubscribe();
+      subscription.remove();
     };
-  }, [dispatch]);
+  }, [userEmail]);
+
+  const linking: LinkingOptions<AuthStackParamList> = {
+    prefixes: ['bluelectric://', 'https://bluelectric.app'],
+    config: {
+      screens: {
+        Login: 'login',
+        Register: 'register',
+        ForgotPassword: 'forgot-password'
+      }
+    },
+    getStateFromPath: (path: string) => {
+      console.log('Path recibido:', path);
+      try {
+        if (path.includes('access_token')) {
+          return {
+            routes: [
+              { name: 'Login' }
+            ]
+          };
+        }
+        return undefined;
+      } catch (error) {
+        console.error('Error al procesar path:', error);
+        return undefined;
+      }
+    }
+  };
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+    <NavigationContainer linking={linking}>
       <RootNavigator />
-    </SafeAreaProvider>
+    </NavigationContainer>
   );
-};
+}
 
-// Componente principal de la aplicación
 export default function App() {
   return (
     <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <AppContent />
-      </PersistGate>
+      <AppContent />
     </Provider>
   );
-} 
+}

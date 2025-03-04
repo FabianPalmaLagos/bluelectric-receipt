@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import AuthNavigator from './AuthNavigator';
@@ -13,9 +12,7 @@ const RootNavigator: React.FC = () => {
   const isAuthenticated = false;
 
   return (
-    <NavigationContainer>
-      {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
-    </NavigationContainer>
+    isAuthenticated ? <MainNavigator /> : <AuthNavigator />
   );
 };
 
