@@ -1,8 +1,8 @@
-# BlueElectric Receipt - Documentación del Proyecto
+# BlueElectric - Documentación del Proyecto
 
 ## Descripción General
 
-BlueElectric Receipt es una aplicación móvil desarrollada con React Native y Expo que permite a los usuarios gestionar gastos y recibos de manera eficiente. La aplicación está diseñada para facilitar el seguimiento de gastos por proyecto, permitiendo a los usuarios capturar imágenes de recibos, organizarlos por proyectos y gestionar su aprobación.
+BlueElectric es una aplicación móvil desarrollada con React Native y Expo que permite a los usuarios gestionar gastos y recibos de manera eficiente. La aplicación está diseñada para facilitar el seguimiento de gastos por proyecto, permitiendo a los usuarios capturar imágenes de recibos, organizarlos por proyectos y gestionar su aprobación.
 
 ## Tecnologías Utilizadas
 
@@ -15,7 +15,7 @@ BlueElectric Receipt es una aplicación móvil desarrollada con React Native y E
 ## Estructura del Proyecto
 
 ```
-bluelectric-receipt/
+bluelectric/
 ├── .env                  # Variables de entorno (Supabase URL, Anon Key)
 ├── .gitignore            # Archivos y directorios ignorados por Git
 ├── App.tsx               # Punto de entrada de la aplicación

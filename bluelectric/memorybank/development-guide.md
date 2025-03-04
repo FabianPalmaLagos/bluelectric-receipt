@@ -15,8 +15,8 @@ Esta guía proporciona instrucciones detalladas para configurar el entorno de de
 ### Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/bluelectric-receipt.git
-cd bluelectric-receipt
+git clone https://github.com/tu-usuario/bluelectric.git
+cd bluelectric
 ```
 
 ### Instalar Dependencias

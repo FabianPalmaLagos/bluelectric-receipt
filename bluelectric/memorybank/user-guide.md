@@ -265,7 +265,7 @@ En la versión actual, no hay límite en el número de recibos que puedes almace
 
 Si encuentras algún problema o tienes preguntas adicionales:
 
-- **Email de soporte**: support@bluelectric-receipt.com
+- **Email de soporte**: support@bluelectric.com
 - **Horario de atención**: Lunes a Viernes, 9:00 - 18:00 (GMT-5)
 - **Tiempo de respuesta**: 24-48 horas hábiles
 

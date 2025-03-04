@@ -22,6 +22,6 @@ module.exports = {
   testEnvironment: 'node',
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/bluelectric-receipt/'
+    '/bluelectric/'
   ]
 }; 

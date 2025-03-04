@@ -5,7 +5,7 @@ Este documento describe la arquitectura completa de la aplicación BlueElectric 
 ## Estructura General del Proyecto
 
 ```
-bluelectric-receipt/
+bluelectric/
 ├── .env                  # Variables de entorno (Supabase URL, Anon Key)
 ├── .gitignore            # Archivos y directorios ignorados por Git
 ├── App.tsx               # Punto de entrada de la aplicación

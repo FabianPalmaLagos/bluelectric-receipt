@@ -37,8 +37,8 @@ BlueElectric Receipt es una aplicación móvil que permite a los usuarios (Admin
 
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/bluelectric-receipt.git
-   cd bluelectric-receipt
+   git clone https://github.com/tu-usuario/bluelectric.git
+   cd bluelectric
    ```
 
 2. Instalar dependencias:
@@ -65,7 +65,7 @@ BlueElectric Receipt es una aplicación móvil que permite a los usuarios (Admin
 ## Estructura del Proyecto
 
 ```
-bluelectric-receipt/
+bluelectric/
 ├── src/
 │   ├── api/            # Configuración de API y servicios
 │   ├── assets/         # Imágenes, fuentes y otros recursos

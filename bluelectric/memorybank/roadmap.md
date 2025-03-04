@@ -205,7 +205,7 @@ Estamos explorando las siguientes áreas para posibles incorporaciones futuras:
 
 Valoramos las contribuciones de nuestra comunidad de usuarios y desarrolladores. Si tienes sugerencias para la hoja de ruta:
 
-1. **Para Usuarios**: Envía tus sugerencias a través de la función "Feedback" en la aplicación o por email a feedback@bluelectric-receipt.com
+1. **Para Usuarios**: Envía tus sugerencias a través de la función "Feedback" en la aplicación o por email a feedback@bluelectric.com
 
 2. **Para Desarrolladores**: Puedes contribuir con ideas, código o documentación a través de:
    - Issues en GitHub
