@@ -1,16 +1,5 @@
 // Mock de constantes para pruebas
 
-// Añadimos un test dummy para que Jest no se queje
-describe('Constants Mock', () => {
-  it('should export constants correctly', () => {
-    expect(COLORS).toBeDefined();
-    expect(SPACING).toBeDefined();
-    expect(FONT_SIZE).toBeDefined();
-    expect(BORDER_RADIUS).toBeDefined();
-    expect(SHADOWS).toBeDefined();
-  });
-});
-
 export const COLORS = {
   primary: {
     light: '#a8d8ff',
@@ -128,4 +117,15 @@ export const SHADOWS = {
     shadowRadius: 4.65,
     elevation: 8,
   },
-}; 
+};
+
+// Añadimos un test dummy para que Jest no se queje
+describe('Constants Mock', () => {
+  it('should export constants correctly', () => {
+    expect(COLORS).toBeDefined();
+    expect(SPACING).toBeDefined();
+    expect(FONT_SIZE).toBeDefined();
+    expect(BORDER_RADIUS).toBeDefined();
+    expect(SHADOWS).toBeDefined();
+  });
+}); 

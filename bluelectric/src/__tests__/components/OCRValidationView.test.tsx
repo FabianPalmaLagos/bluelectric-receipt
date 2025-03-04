@@ -112,7 +112,7 @@ describe('OCRValidationView', () => {
   });
 
   it('maneja correctamente cuando se desactivan los switches de datos', () => {
-    const { getByText, getAllByRole } = render(
+    const { getByText, getAllByTestId } = render(
       <OCRValidationView
         extractedData={mockExtractedData}
         onConfirm={mockOnConfirm}
@@ -121,7 +121,7 @@ describe('OCRValidationView', () => {
     );
 
     // Obtener los switches (pueden variar según la implementación de @testing-library/react-native)
-    const switches = getAllByRole('switch');
+    const switches = getAllByTestId('Switch');
     
     // Desactivar todos los switches
     fireEvent(switches[0], 'valueChange', false); // Comercio

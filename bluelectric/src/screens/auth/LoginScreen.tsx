@@ -121,7 +121,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.common.white} />
+              <ActivityIndicator color={COLORS.common.white} testID="loading-indicator" />
             ) : (
               <Text style={styles.loginButtonText}>Iniciar sesión</Text>
             )}

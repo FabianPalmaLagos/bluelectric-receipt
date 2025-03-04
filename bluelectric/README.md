@@ -21,7 +21,7 @@ BlueElectric Receipt es una aplicación móvil que permite a los usuarios (Admin
 - **Autenticación:** Supabase Auth
 - **Almacenamiento:** Supabase Storage
 - **Gestión de estado:** Redux Toolkit
-- **Persistencia offline:** Redux Persist
+- **Persistencia offline:** Redux Offline
 - **Notificaciones push:** Firebase Cloud Messaging
 - **OCR:** React Native Text Recognition
 

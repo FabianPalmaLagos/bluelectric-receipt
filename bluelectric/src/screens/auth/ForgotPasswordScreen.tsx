@@ -115,7 +115,7 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.common.white} />
+              <ActivityIndicator color={COLORS.common.white} testID="loading-indicator" />
             ) : (
               <Text style={styles.resetButtonText}>Enviar Enlace</Text>
             )}

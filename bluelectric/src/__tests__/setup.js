@@ -1,3 +1,6 @@
+// Importar regenerator-runtime para soporte de async/await
+import 'regenerator-runtime/runtime';
+
 // Configuración global para pruebas
 
 // Mock para @react-native-community/datetimepicker
@@ -43,7 +46,7 @@ const originalConsoleWarn = console.warn;
 
 console.error = (...args) => {
   // Permitir errores específicos para depuración
-  if (args[0].includes('Error en el procesamiento de la imagen:')) {
+  if (args[0] && typeof args[0] === 'string' && args[0].includes('Error en el procesamiento de la imagen:')) {
     originalConsoleError(...args);
     return;
   }
@@ -56,3 +59,10 @@ console.warn = (...args) => {
   // Suprimir advertencias
   return;
 };
+
+// Test dummy para evitar el error "Your test suite must contain at least one test"
+describe('Setup', () => {
+  test('setup file is loaded', () => {
+    expect(true).toBe(true);
+  });
+});

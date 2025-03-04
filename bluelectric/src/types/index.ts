@@ -39,6 +39,7 @@ export enum ReceiptStatus {
 // Tipos de recibo
 export interface Receipt {
   id: string;
+  tempId?: string; // ID temporal para operaciones offline
   userId: string;
   projectId: string;
   categoryId: string;
@@ -51,6 +52,7 @@ export interface Receipt {
   rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
+  isOffline?: boolean; // Indica si el recibo está pendiente de sincronizar
 }
 
 // Tipos de comentario
