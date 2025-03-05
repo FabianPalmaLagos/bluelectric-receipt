@@ -1,108 +1,55 @@
-# Dependencias
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
 node_modules/
-/.pnp
-.pnp.js
-yarn.lock
-package-lock.json
 
-# Archivos de entorno
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.*.local
-.env.keys
-
-# Archivos de construcción
-/build/
-/dist/
-/out/
-/.next/
-/web-build/
-/.expo/
+# Expo
+.expo/
+dist/
+web-build/
 expo-env.d.ts
 
-# Archivos de caché
-.cache/
-.parcel-cache/
-.npm
-.eslintcache
-.stylelintcache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Archivos de logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-
-# Archivos de sistema
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.lnk
-
-# Archivos de IDE y editores
-/.idea/
-/.vscode/
-*.swp
-*.swo
-*.sublime-workspace
-*.sublime-project
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.cursor/
-
-# Archivos de testing
-/coverage/
-/.nyc_output/
-/cypress/videos/
-/cypress/screenshots/
-
-# Archivos específicos de Supabase
-.branches
-.temp
-**/supabase/.branches/
-**/supabase/.temp/
-**/supabase/seed.sql
-*.dump
-*.dump.sql
-database_dump.sql
-users_dump.sql
-.supabase/
-
-# Archivos específicos de React Native / Expo
+# Native
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-*.ipa
-*.apk
-*.aab
+
+# Metro
 .metro-health-check*
 
-# Archivos específicos de iOS
-/ios/Pods/
-/ios/build/
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# OSX
+#
+.DS_Store
+
+# Xcode
+#
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
 xcuserdata
 *.xccheckout
 *.moved-aside
@@ -112,21 +59,196 @@ DerivedData
 *.xcuserstate
 project.xcworkspace
 
-# Archivos específicos de Android
-/android/build/
-/android/app/build/
-/android/.gradle
-/android/local.properties
-/android/*.iml
-/android/.idea
-/android/.cxx/
-/android/*.keystore
-!/android/debug.keystore
+# Android/IntelliJ
+#
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+*.keystore
+!debug.keystore
+
+# node.js
+#
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Bundle artifacts
+*.jsbundle
+
+# CocoaPods
+/ios/Pods/
+
+# Temporary files created by Metro
+.metro-health-check*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # TypeScript
 *.tsbuildinfo
 
+# Testing
+coverage/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Supabase
+**/supabase/.branches/
+**/supabase/.temp/
+**/supabase/seed.sql
+*.dump
+*.dump.sql
+database_dump.sql
+users_dump.sql
+.supabase/
+
+# ------------- Entorno de desarrollo -------------
+# Node y dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.pnp/
+.pnp.js
+
+# Expo
+.expo/
+web-build/
+dist/
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Metro
+.metro-health-check*
+
+# ------------- Sistemas operativos -------------
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.pem
+
+# ------------- Entornos nativos -------------
+# iOS
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+ios/*.xcworkspace
+ios/*.xcodeproj/xcuserdata
+ios/*.xcodeproj/project.xcworkspace/xcuserdata
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/gradle/
+android/local.properties
+android/captures/
+android/*.iml
+android/.idea/
+.cxx/
+*.keystore
+!debug.keystore
+android/app/release/
+
+# ------------- Archivos de construcción -------------
+build/
+*.jsbundle
+*.bundle
+*.map
+
+# ------------- Tipado y Compilación -------------
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ------------- Variables de entorno -------------
+.env
+.env.*
+!.env.example
+
+# ------------- Pruebas y cobertura -------------
+coverage/
+__snapshots__/
+.nyc_output/
+
+# ------------- Editores y IDEs -------------
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Cursor
+.cursor/
+
+# JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Otros editores
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ------------- Supabase -------------
+supabase/.branches/
+supabase/.temp/
+supabase/seed.sql
+*.dump
+*.dump.sql
+database_dump.sql
+users_dump.sql
+.supabase/
+
+# ------------- Específicos del proyecto -------------
+# Archivos de respaldo
+*_backup/
+*.bak
+*.old
+*.backup
+
 # Archivos temporales
-*.tmp
-*.temp
-.specstory/ 
+.tmp/
+tmp/
+temp/
+*.log
+
+# Específicos para depuración
+debug.log
+
+# Archivos locales de configuración personal
+config.local.js
+settings.local.js

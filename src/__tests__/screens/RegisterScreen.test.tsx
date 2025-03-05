@@ -3,7 +3,8 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Provider } from 'react-redux';
 import configureStore from 'redux-mock-store';
 import RegisterScreen from '../../screens/auth/RegisterScreen';
-import { registerUser } from '../../features/auth/authSlice';
+import { registerUser } from '../../store/slices/authSlice';
+import { UserRole } from '../../types';
 import { Alert } from 'react-native';
 
 // Mock de react-navigation
@@ -16,49 +17,47 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-// Mock de la acción registerUser
-jest.mock('../../features/auth/authSlice', () => ({
+// Mock de las acciones de Redux
+jest.mock('../../store/slices/authSlice', () => ({
   registerUser: jest.fn(),
 }));
 
 // Mock de Alert
-jest.mock('react-native', () => {
-  const reactNative = jest.requireActual('react-native');
+jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+// Mock de Picker
+jest.mock('@react-native-picker/picker', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  
+  const Picker = ({ children, selectedValue, onValueChange }) => (
+    <View testID="picker">
+      {React.Children.map(children, child => {
+        if (child.props.value === selectedValue) {
+          return React.cloneElement(child, { testID: 'selected' });
+        }
+        return child;
+      })}
+    </View>
+  );
+  
+  Picker.Item = ({ label, value }) => <Text testID={`picker-item-${value}`}>{label}</Text>;
+  
   return {
-    ...reactNative,
-    Alert: {
-      ...reactNative.Alert,
-      alert: jest.fn(),
-    },
+    Picker,
   };
 });
 
-// Mock del componente Picker
-jest.mock('@react-native-picker/picker', () => {
-  const Picker = ({ children, selectedValue, onValueChange }) => (
-    <select
-      value={selectedValue}
-      onChange={(e) => onValueChange(e.target.value)}
-      data-testid="picker"
-    >
-      {children}
-    </select>
-  );
-  
-  Picker.Item = ({ label, value }) => (
-    <option value={value}>{label}</option>
-  );
-  
-  return { Picker };
-});
-
-// Configuración del mock store
-const mockStore = configureStore([]);
+// Configuración correcta de redux-mock-store
+const middlewares = [];
+const mockStore = configureStore(middlewares);
 
 describe('RegisterScreen', () => {
   let store;
-  
+  let navigation;
+
   beforeEach(() => {
+    // Configuración del store con estado inicial
     store = mockStore({
       auth: {
         user: null,
@@ -67,158 +66,210 @@ describe('RegisterScreen', () => {
         error: null,
       },
     });
-    
-    // Limpiar todos los mocks antes de cada prueba
+
+    // Mock de la navegación
+    navigation = {
+      navigate: jest.fn(),
+    };
+
+    // Resetear los mocks entre pruebas
     jest.clearAllMocks();
   });
-  
-  // Prueba: Mostrar alerta si los campos están vacíos
+
+  test('renderiza correctamente', () => {
+    const { getByText, getByPlaceholderText } = render(
+      <Provider store={store}>
+        <RegisterScreen navigation={navigation} />
+      </Provider>
+    );
+
+    // Verificar elementos clave en la pantalla
+    expect(getByText('Crear Cuenta')).toBeTruthy();
+    expect(getByPlaceholderText('Ingresa tu nombre')).toBeTruthy();
+    expect(getByPlaceholderText('Ingresa tu apellido')).toBeTruthy();
+    expect(getByPlaceholderText('Ingresa tu correo electrónico')).toBeTruthy();
+    expect(getByPlaceholderText('Ingresa tu contraseña')).toBeTruthy();
+    expect(getByPlaceholderText('Confirma tu contraseña')).toBeTruthy();
+    expect(getByText('Registrarse')).toBeTruthy();
+    expect(getByText('¿Ya tienes una cuenta?')).toBeTruthy();
+    expect(getByText('Iniciar sesión')).toBeTruthy();
+  });
+
+  test('muestra mensaje de error cuando está presente en el estado', () => {
+    const errorStore = mockStore({
+      auth: {
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        error: 'Error en el registro',
+      },
+    });
+
+    const { getByText } = render(
+      <Provider store={errorStore}>
+        <RegisterScreen navigation={navigation} />
+      </Provider>
+    );
+
+    expect(getByText('Error en el registro')).toBeTruthy();
+  });
+
+  test('muestra indicador de carga durante el proceso de registro', () => {
+    const loadingStore = mockStore({
+      auth: {
+        user: null,
+        isAuthenticated: false,
+        loading: true,
+        error: null,
+      },
+    });
+
+    const { getByTestId } = render(
+      <Provider store={loadingStore}>
+        <RegisterScreen navigation={navigation} />
+      </Provider>
+    );
+
+    expect(getByTestId('loading-indicator')).toBeTruthy();
+  });
+
   test('muestra alerta si los campos están vacíos', async () => {
-    // Renderizar el componente con el store
-    const { getByTestId } = render(
+    const { getByText } = render(
       <Provider store={store}>
-        <RegisterScreen />
+        <RegisterScreen navigation={navigation} />
       </Provider>
     );
-    
-    // Simular clic en el botón de registro sin llenar campos
-    fireEvent.press(getByTestId('register-button'));
-    
-    // Verificar que se muestra la alerta
+
+    // Simular clic en el botón de registro sin completar campos
+    fireEvent.press(getByText('Registrarse'));
+
+    // Verificar que se mostró la alerta correcta
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Todos los campos son obligatorios'
-      );
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Por favor, completa todos los campos');
     });
+
+    // Verificar que no se llamó a la acción de registro
+    expect(registerUser).not.toHaveBeenCalled();
   });
-  
-  // Prueba: Mostrar alerta si el email es inválido
+
   test('muestra alerta si el email es inválido', async () => {
-    // Renderizar el componente con el store
-    const { getByTestId } = render(
+    const { getByText, getByPlaceholderText } = render(
       <Provider store={store}>
-        <RegisterScreen />
+        <RegisterScreen navigation={navigation} />
       </Provider>
     );
-    
-    // Llenar campos con email inválido
-    fireEvent.changeText(getByTestId('name-input'), 'Test User');
-    fireEvent.changeText(getByTestId('email-input'), 'invalid-email');
-    fireEvent.changeText(getByTestId('password-input'), 'password123');
-    fireEvent.changeText(getByTestId('confirm-password-input'), 'password123');
-    
+
+    // Completar campos con email inválido
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu nombre'), 'Juan');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu apellido'), 'Pérez');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu correo electrónico'), 'email-invalido');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu contraseña'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Confirma tu contraseña'), 'password123');
+
     // Simular clic en el botón de registro
-    fireEvent.press(getByTestId('register-button'));
-    
-    // Verificar que se muestra la alerta de email inválido
+    fireEvent.press(getByText('Registrarse'));
+
+    // Verificar que se mostró la alerta correcta
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Por favor ingresa un email válido'
-      );
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Por favor, ingresa un correo electrónico válido');
     });
+
+    // Verificar que no se llamó a la acción de registro
+    expect(registerUser).not.toHaveBeenCalled();
   });
-  
-  // Prueba: Mostrar alerta si la contraseña es muy corta
+
   test('muestra alerta si la contraseña es muy corta', async () => {
-    // Renderizar el componente con el store
-    const { getByTestId } = render(
+    const { getByText, getByPlaceholderText } = render(
       <Provider store={store}>
-        <RegisterScreen />
+        <RegisterScreen navigation={navigation} />
       </Provider>
     );
-    
-    // Llenar campos con contraseña corta
-    fireEvent.changeText(getByTestId('name-input'), 'Test User');
-    fireEvent.changeText(getByTestId('email-input'), 'test@example.com');
-    fireEvent.changeText(getByTestId('password-input'), '123');
-    fireEvent.changeText(getByTestId('confirm-password-input'), '123');
-    
+
+    // Completar campos con contraseña corta
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu nombre'), 'Juan');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu apellido'), 'Pérez');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu correo electrónico'), 'juan@ejemplo.com');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu contraseña'), '12345');
+    fireEvent.changeText(getByPlaceholderText('Confirma tu contraseña'), '12345');
+
     // Simular clic en el botón de registro
-    fireEvent.press(getByTestId('register-button'));
-    
-    // Verificar que se muestra la alerta de contraseña corta
+    fireEvent.press(getByText('Registrarse'));
+
+    // Verificar que se mostró la alerta correcta
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'La contraseña debe tener al menos 6 caracteres'
-      );
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'La contraseña debe tener al menos 6 caracteres');
     });
+
+    // Verificar que no se llamó a la acción de registro
+    expect(registerUser).not.toHaveBeenCalled();
   });
-  
-  // Prueba: Mostrar alerta si las contraseñas no coinciden
+
   test('muestra alerta si las contraseñas no coinciden', async () => {
-    // Renderizar el componente con el store
-    const { getByTestId } = render(
+    const { getByText, getByPlaceholderText } = render(
       <Provider store={store}>
-        <RegisterScreen />
+        <RegisterScreen navigation={navigation} />
       </Provider>
     );
-    
-    // Llenar campos con contraseñas que no coinciden
-    fireEvent.changeText(getByTestId('name-input'), 'Test User');
-    fireEvent.changeText(getByTestId('email-input'), 'test@example.com');
-    fireEvent.changeText(getByTestId('password-input'), 'password123');
-    fireEvent.changeText(getByTestId('confirm-password-input'), 'different');
-    
+
+    // Completar campos con contraseñas que no coinciden
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu nombre'), 'Juan');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu apellido'), 'Pérez');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu correo electrónico'), 'juan@ejemplo.com');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu contraseña'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Confirma tu contraseña'), 'password456');
+
     // Simular clic en el botón de registro
-    fireEvent.press(getByTestId('register-button'));
-    
-    // Verificar que se muestra la alerta de contraseñas que no coinciden
+    fireEvent.press(getByText('Registrarse'));
+
+    // Verificar que se mostró la alerta correcta
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Las contraseñas no coinciden'
-      );
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Las contraseñas no coinciden');
     });
+
+    // Verificar que no se llamó a la acción de registro
+    expect(registerUser).not.toHaveBeenCalled();
   });
-  
-  // Prueba: Llamar a la acción registerUser con los datos correctos
+
   test('llama a la acción registerUser con los datos correctos', async () => {
-    // Renderizar el componente con el store
-    const { getByTestId } = render(
+    const { getByText, getByPlaceholderText } = render(
       <Provider store={store}>
-        <RegisterScreen />
+        <RegisterScreen navigation={navigation} />
       </Provider>
     );
-    
-    // Llenar todos los campos correctamente
-    fireEvent.changeText(getByTestId('name-input'), 'Test User');
-    fireEvent.changeText(getByTestId('email-input'), 'test@example.com');
-    fireEvent.changeText(getByTestId('password-input'), 'password123');
-    fireEvent.changeText(getByTestId('confirm-password-input'), 'password123');
-    
+
+    // Completar todos los campos correctamente
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu nombre'), 'Juan');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu apellido'), 'Pérez');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu correo electrónico'), 'juan@ejemplo.com');
+    fireEvent.changeText(getByPlaceholderText('Ingresa tu contraseña'), 'password123');
+    fireEvent.changeText(getByPlaceholderText('Confirma tu contraseña'), 'password123');
+
     // Simular clic en el botón de registro
-    fireEvent.press(getByTestId('register-button'));
-    
-    // Verificar que se llama a la acción registerUser con los datos correctos
+    fireEvent.press(getByText('Registrarse'));
+
+    // Verificar que se llamó a la acción con los parámetros correctos
     await waitFor(() => {
       expect(registerUser).toHaveBeenCalledWith({
-        name: 'Test User',
-        email: 'test@example.com',
+        email: 'juan@ejemplo.com',
         password: 'password123',
-        role: 'cliente', // Valor por defecto
+        firstName: 'Juan',
+        lastName: 'Pérez',
+        role: UserRole.WORKER, // Valor por defecto
       });
     });
   });
-  
-  // Prueba: Navegar a Login al hacer clic en el enlace
+
   test('navega a Login al hacer clic en el enlace de inicio de sesión', () => {
-    // Obtener el mock de navigate
-    const mockNavigate = require('@react-navigation/native').useNavigation().navigate;
-    
-    // Renderizar el componente con el store
-    const { getByTestId } = render(
+    const { getByText } = render(
       <Provider store={store}>
-        <RegisterScreen />
+        <RegisterScreen navigation={navigation} />
       </Provider>
     );
-    
+
     // Simular clic en el enlace de inicio de sesión
-    fireEvent.press(getByTestId('login-link'));
-    
-    // Verificar que se navega a la pantalla de Login
-    expect(mockNavigate).toHaveBeenCalledWith('Login');
+    fireEvent.press(getByText('Iniciar sesión'));
+
+    // Verificar que se navegó a la pantalla correcta
+    expect(navigation.navigate).toHaveBeenCalledWith('Login');
   });
 }); 

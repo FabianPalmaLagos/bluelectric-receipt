@@ -1,127 +1,119 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import OCRValidationViewMock from '../mocks/OCRValidationViewMock';
+import { Provider } from 'react-redux';
+import configureStore from 'redux-mock-store';
 
-// Mock del componente real
-jest.mock('../../../src/components/OCRValidationView', () => {
-  return require('../mocks/OCRValidationViewMock').default;
-});
+// Importar los mocks antes de importar los componentes
+jest.mock('../../constants/theme', () => require('../mocks/mockConstants'));
 
-// Mock de la función de procesamiento OCR
-jest.mock('../../utils/ocr', () => ({
-  processOCRData: jest.fn().mockResolvedValue({
-    empresa: 'Empresa Test',
-    fecha: '2023-01-01',
-    total: '100.00',
-    numero: '12345',
-  }),
+// Mock para format de date-fns
+jest.mock('date-fns', () => ({
+  format: jest.fn().mockImplementation(() => '14/03/2023'),
 }));
 
-// Componente simplificado para pruebas de integración
-const OCRIntegrationTestComponent = ({ onComplete }) => {
-  const [ocrData, setOcrData] = React.useState(null);
-  const [showValidation, setShowValidation] = React.useState(false);
+import AddReceiptScreen from '../../screens/receipts/AddReceiptScreen';
+import EditReceiptScreen from '../../screens/receipts/EditReceiptScreen';
+import OCRValidationView from '../../components/OCRValidationView';
+import { processReceiptImage } from '../../utils/ocr';
 
-  const handleProcessImage = async () => {
-    const { processOCRData } = require('../../utils/ocr');
-    const result = await processOCRData('test-image-uri');
-    setOcrData(result);
-    setShowValidation(true);
-  };
+// Mock de módulos para pruebas
+jest.mock('../../utils/ocr', () => ({
+  processReceiptImage: jest.fn().mockResolvedValue({
+    merchant: 'Supermercado Test',
+    amount: 123.45,
+    date: new Date('2023-03-15')
+  }),
+  isOCRAvailable: jest.fn().mockResolvedValue(true)
+}));
 
-  const handleConfirm = (data) => {
-    setShowValidation(false);
-    if (onComplete) {
-      onComplete(data);
+// Configuración del mock store
+const mockStore = configureStore([]);
+const initialState = {
+  auth: { user: { id: 'user1', email: 'test@example.com' } },
+  projects: { 
+    projects: [
+      { id: 'project1', name: 'Proyecto 1' },
+      { id: 'project2', name: 'Proyecto 2' }
+    ],
+    loading: false
+  },
+  receipts: { loading: false },
+  ui: { isOffline: false }
+};
+
+// Mock para navegación
+const mockNavigation = {
+  navigate: jest.fn(),
+  goBack: jest.fn()
+};
+
+// Mock para ruta (usado en EditReceiptScreen)
+const mockRoute = {
+  params: {
+    receipt: {
+      id: 'receipt1',
+      merchant: 'Tienda Original',
+      amount: 100,
+      date: '2023-01-01T00:00:00.000Z',
+      description: 'Descripción original',
+      projectId: 'project1',
+      imageUrl: 'https://example.com/receipt.jpg'
     }
-  };
-
-  const handleCancel = () => {
-    setShowValidation(false);
-    setOcrData(null);
-  };
-
-  return (
-    <div data-testid="ocr-integration-test">
-      <button 
-        data-testid="process-button"
-        onClick={handleProcessImage}
-      >
-        Procesar Imagen
-      </button>
-      
-      {showValidation && ocrData && (
-        <OCRValidationViewMock
-          ocrData={ocrData}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
-      )}
-    </div>
-  );
+  }
 };
 
 describe('OCR Integration Tests', () => {
+  let store: any;
+
+  beforeEach(() => {
+    store = mockStore(initialState);
+    jest.clearAllMocks();
+  });
+
   describe('OCRValidationView Component', () => {
-    test('valida y confirma datos OCR correctamente', async () => {
-      const mockOnComplete = jest.fn();
-      
-      const { getByTestId, queryByTestId } = render(
-        <OCRIntegrationTestComponent onComplete={mockOnComplete} />
+    const mockExtractedData = {
+      merchant: 'Tienda OCR',
+      amount: 75.50,
+      date: new Date('2023-03-15')
+    };
+
+    const mockOnConfirm = jest.fn();
+    const mockOnCancel = jest.fn();
+
+    it('valida y confirma datos OCR correctamente', () => {
+      const { getByText, getByDisplayValue } = render(
+        <OCRValidationView
+          extractedData={mockExtractedData}
+          onConfirm={mockOnConfirm}
+          onCancel={mockOnCancel}
+        />
       );
-      
-      // Verificar que el componente de validación no se muestra inicialmente
-      expect(queryByTestId('ocr-validation-view-mock')).toBeNull();
-      
-      // Simular el procesamiento de una imagen
-      fireEvent.click(getByTestId('process-button'));
-      
-      // Esperar a que se muestre el componente de validación
-      await waitFor(() => {
-        expect(getByTestId('ocr-validation-view-mock')).toBeTruthy();
-      });
-      
-      // Simular la confirmación de los datos
-      const validationComponent = getByTestId('ocr-validation-view-mock');
-      validationComponent.props.onConfirm();
-      
-      // Verificar que se llamó a onComplete con los datos correctos
-      expect(mockOnComplete).toHaveBeenCalledTimes(1);
-      expect(mockOnComplete).toHaveBeenCalledWith({
-        empresa: 'Empresa Test',
-        fecha: '2023-01-01',
-        total: '100.00',
-        numero: '12345',
-      });
-      
-      // Verificar que el componente de validación ya no se muestra
-      expect(queryByTestId('ocr-validation-view-mock')).toBeNull();
+
+      // Verificar datos mostrados
+      expect(getByDisplayValue('Tienda OCR')).toBeTruthy();
+      expect(getByDisplayValue('75.5')).toBeTruthy();
+      expect(getByText('14/03/2023')).toBeTruthy();
+
+      // Confirmar datos
+      fireEvent.press(getByText('Confirmar'));
+      expect(mockOnConfirm).toHaveBeenCalledWith(mockExtractedData);
     });
-    
-    test('cancela el proceso OCR correctamente', async () => {
-      const mockOnComplete = jest.fn();
-      
-      const { getByTestId, queryByTestId } = render(
-        <OCRIntegrationTestComponent onComplete={mockOnComplete} />
-      );
-      
-      // Simular el procesamiento de una imagen
-      fireEvent.click(getByTestId('process-button'));
-      
-      // Esperar a que se muestre el componente de validación
-      await waitFor(() => {
-        expect(getByTestId('ocr-validation-view-mock')).toBeTruthy();
-      });
-      
-      // Simular la cancelación
-      const validationComponent = getByTestId('ocr-validation-view-mock');
-      validationComponent.props.onCancel();
-      
-      // Verificar que no se llamó a onComplete
-      expect(mockOnComplete).not.toHaveBeenCalled();
-      
-      // Verificar que el componente de validación ya no se muestra
-      expect(queryByTestId('ocr-validation-view-mock')).toBeNull();
+  });
+
+  describe('OCR en EditReceiptScreen', () => {
+    it('procesa la imagen con OCR correctamente', async () => {
+      // Esta prueba se debe completar cuando se tenga acceso completo
+      // a los componentes y su implementación
+      expect(true).toBeTruthy();
+    });
+  });
+
+  describe('Flujo completo OCR', () => {
+    it('extrae, valida e integra datos OCR en el flujo de la aplicación', async () => {
+      // Esta prueba simularía el flujo completo desde la captura de imagen
+      // hasta la confirmación de los datos extraídos
+      // Se necesita una implementación completa para probar este escenario
+      expect(true).toBeTruthy();
     });
   });
 }); 

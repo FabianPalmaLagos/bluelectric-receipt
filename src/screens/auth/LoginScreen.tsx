@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,40 +10,116 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  useColorScheme,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUser } from '../../redux/actions/authActions';
-import { RootState } from '../../redux/store';
+import { AuthNavigationProp } from '../../navigation/types';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants/theme';
+import { loginUser } from '../../store/slices/authSlice';
+import { RootState } from '../../store';
+import { supabase } from '../../api/supabase';
 
-// Importar el logo
-import logoSource from '../../assets/images/logo.png';
+interface LoginScreenProps {
+  navigation: AuthNavigationProp<'Login'>;
+}
 
-const LoginScreen: React.FC = () => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
+  const [validationToken, setValidationToken] = useState('');
+  const [showTokenInput, setShowTokenInput] = useState(false);
   const dispatch = useDispatch();
-  const navigation = useNavigation();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { loading, error } = useSelector((state: RootState) => state.auth);
+  const colorScheme = useColorScheme();
+  
+  // Determinar qué logo usar según el modo de visualización
+  const logoSource = colorScheme === 'dark' 
+    ? require('../../assets/logo-dark.png') 
+    : require('../../assets/logo-light.png');
 
-  const handleLogin = () => {
-    if (email.trim() && password.trim()) {
-      dispatch(loginUser({ email, password }));
+  const handleLogin = async () => {
+    if (email.trim() === '' || password === '') {
+      // Aquí podríamos mostrar una notificación de error
+      return;
+    }
+
+    // @ts-ignore - Ignoramos el error de tipado por ahora
+    dispatch(loginUser({ email, password }));
+  };
+
+  // Nueva función para manejar la validación manual
+  const handleManualValidation = () => {
+    setShowTokenInput(true);
+  };
+
+  // Nueva función para validar token
+  const validateEmailToken = async () => {
+    if (!validationToken || !email) {
+      Alert.alert('Error', 'Por favor ingresa tu correo y el token de validación');
+      return;
+    }
+
+    setIsValidatingEmail(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: validationToken,
+        type: 'signup'
+      });
+
+      if (error) {
+        Alert.alert('Error', `No se pudo verificar tu correo: ${error.message}`);
+      } else {
+        Alert.alert('Éxito', 'Tu correo ha sido verificado correctamente. Ahora puedes iniciar sesión.');
+        setShowTokenInput(false);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Ocurrió un error durante la validación');
+    } finally {
+      setIsValidatingEmail(false);
     }
   };
 
-  const navigateToForgotPassword = () => {
-    navigation.navigate('ForgotPassword');
-  };
-
-  const navigateToRegister = () => {
-    navigation.navigate('Register');
+  // Agregar UI para validación manual
+  const renderTokenInput = () => {
+    if (!showTokenInput) return null;
+    
+    return (
+      <View style={styles.tokenContainer}>
+        <Text style={styles.tokenTitle}>Validación manual</Text>
+        <Text style={styles.tokenDescription}>
+          Introduce el token de validación que recibiste en el correo de confirmación.
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Token de validación"
+          value={validationToken}
+          onChangeText={setValidationToken}
+        />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={validateEmailToken}
+          disabled={isValidatingEmail}
+        >
+          {isValidatingEmail ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Validar cuenta</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[
+        styles.container, 
+        colorScheme === 'dark' && styles.containerDark
+      ]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -53,57 +129,94 @@ const LoginScreen: React.FC = () => {
             style={styles.logo}
             resizeMode="contain"
           />
+          <Text style={[
+            styles.subtitle,
+            colorScheme === 'dark' && styles.textDark
+          ]}>Gestión de gastos empresariales</Text>
         </View>
 
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Bienvenido</Text>
-          
           {error && <Text style={styles.errorText}>{error}</Text>}
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Contraseña"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          
-          <TouchableOpacity
-            style={styles.forgotPasswordContainer}
-            onPress={navigateToForgotPassword}
-          >
-            <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-          
+
+          <View style={styles.inputContainer}>
+            <Text style={[
+              styles.label,
+              colorScheme === 'dark' && styles.labelDark
+            ]}>Correo electrónico</Text>
+            <TextInput
+              style={[
+                styles.input,
+                colorScheme === 'dark' && styles.inputDark
+              ]}
+              placeholder="Ingresa tu correo electrónico"
+              placeholderTextColor={colorScheme === 'dark' ? COLORS.text.dark.disabled : COLORS.text.light.disabled}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[
+              styles.label,
+              colorScheme === 'dark' && styles.labelDark
+            ]}>Contraseña</Text>
+            <TextInput
+              style={[
+                styles.input,
+                colorScheme === 'dark' && styles.inputDark
+              ]}
+              placeholder="Ingresa tu contraseña"
+              placeholderTextColor={colorScheme === 'dark' ? COLORS.text.dark.disabled : COLORS.text.light.disabled}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
+
+          <View style={styles.forgotPasswordContainer}>
+            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+              <Text style={[
+                styles.forgotPasswordText,
+                colorScheme === 'dark' && styles.textDark
+              ]}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={styles.loginButton}
             onPress={handleLogin}
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" testID="loading-indicator" />
+            {loading ? (
+              <ActivityIndicator color={COLORS.common.white} testID="loading-indicator" />
             ) : (
-              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+              <Text style={styles.loginButtonText}>Iniciar sesión</Text>
             )}
           </TouchableOpacity>
-          
+
+          {/* Botón de validación manual */}
           <TouchableOpacity
-            style={styles.registerContainer}
-            onPress={navigateToRegister}
+            style={styles.validationButton}
+            onPress={handleManualValidation}
           >
-            <Text style={styles.registerText}>
-              ¿No tienes una cuenta? Regístrate
+            <Text style={styles.validationText}>
+              ¿Problemas con la confirmación? Validar manualmente
             </Text>
           </TouchableOpacity>
+
+          {renderTokenInput()}
+
+          <View style={styles.registerContainer}>
+            <Text style={[
+              styles.registerText,
+              colorScheme === 'dark' && styles.textDark
+            ]}>¿No tienes una cuenta? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.registerLink}>Regístrate</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -113,77 +226,135 @@ const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background.light,
+  },
+  containerDark: {
+    backgroundColor: COLORS.background.dark,
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: SPACING.xl,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: SPACING.xl,
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 250,
+    height: 100,
+    marginBottom: SPACING.md,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text.light.secondary,
+    marginBottom: SPACING.md,
+  },
+  textDark: {
+    color: COLORS.text.dark.secondary,
   },
   formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
+    width: '100%',
+    marginBottom: SPACING.xl,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  errorText: {
+    color: COLORS.common.error,
+    marginBottom: SPACING.md,
     textAlign: 'center',
-    color: '#333',
+  },
+  inputContainer: {
+    marginBottom: SPACING.md,
+  },
+  label: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text.light.secondary,
+    marginBottom: SPACING.xs,
+  },
+  labelDark: {
+    color: COLORS.text.dark.secondary,
   },
   input: {
-    height: 50,
+    backgroundColor: COLORS.common.white,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
+    borderColor: '#E0E0E0',
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.md,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text.light.primary,
+  },
+  inputDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333333',
+    color: COLORS.text.dark.primary,
   },
   forgotPasswordContainer: {
     alignItems: 'flex-end',
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
   forgotPasswordText: {
-    color: '#007bff',
+    color: COLORS.primary.medium,
+    fontSize: FONT_SIZE.sm,
   },
   loginButton: {
-    backgroundColor: '#007bff',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
+    backgroundColor: COLORS.primary.medium,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
   loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    color: COLORS.common.white,
+    fontSize: FONT_SIZE.md,
     fontWeight: 'bold',
   },
   registerContainer: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   registerText: {
-    color: '#007bff',
+    color: COLORS.text.light.secondary,
+    fontSize: FONT_SIZE.sm,
   },
-  errorText: {
-    color: 'red',
+  registerLink: {
+    color: COLORS.primary.medium,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: 'bold',
+  },
+  validationButton: {
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  validationText: {
+    color: '#3498db',
+    textAlign: 'center',
+  },
+  tokenContainer: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  tokenTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  tokenDescription: {
     marginBottom: 15,
     textAlign: 'center',
+    color: '#666',
+  },
+  button: {
+    backgroundColor: '#3498db',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

@@ -120,7 +120,7 @@ describe('OCRValidationView', () => {
       />
     );
 
-    // Obtener los switches usando testID
+    // Obtener los switches (pueden variar según la implementación de @testing-library/react-native)
     const switches = getAllByTestId('Switch');
     
     // Desactivar todos los switches

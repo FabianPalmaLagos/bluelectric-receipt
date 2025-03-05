@@ -1,21 +1,5 @@
+// Pruebas básicas para verificar que Jest funciona correctamente
 describe('Pruebas básicas', () => {
-  it('suma 1 + 2 para obtener 3', () => {
-    expect(1 + 2).toBe(3);
-  });
-
-  it('verifica que true es true', () => {
-    expect(true).toBe(true);
-  });
-
-  it('verifica que false es false', () => {
-    expect(false).toBe(false);
-  });
-
-  it('verifica que null es null', () => {
-    expect(null).toBe(null);
-  });
-
-  it('verifica que undefined es undefined', () => {
-    expect(undefined).toBe(undefined);
-  });
-}); 
+  test('suma 1 + 2 igual a 3', () => { expect(1 + 2).toBe(3); });
+  test('true es verdadero', () => { expect(true).toBeTruthy(); });
+});

@@ -1,214 +1,177 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
+import { Provider } from 'react-redux';
+import configureStore from 'redux-mock-store';
+import LoginScreen from '../../screens/auth/LoginScreen';
+import { loginUser } from '../../store/slices/authSlice';
 
-// Mock de los módulos
-jest.mock('react-redux', () => ({
-  useSelector: jest.fn(),
-  useDispatch: jest.fn(),
-}));
-
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: jest.fn(),
-}));
-
-// Mock del componente ScrollView para evitar problemas con ESM
-jest.mock('react-native', () => {
-  const rn = jest.requireActual('react-native');
-  rn.ScrollView = ({ children }) => children;
-  return rn;
-});
-
-// Mock de la imagen del logo
-jest.mock('../../assets/images/logo.png', () => 'logo-mock');
-
-// Componente simplificado para pruebas
-const SimplifiedLoginScreen = () => {
-  const dispatch = useDispatch();
-  const navigation = useNavigation();
-  const { isLoading, error } = useSelector((state: any) => state.auth);
-  
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-
-  const handleLogin = () => {
-    if (email.trim() && password.trim()) {
-      dispatch({ type: 'LOGIN_USER', payload: { email, password } });
-    }
+// Mock de react-navigation
+jest.mock('@react-navigation/native', () => {
+  return {
+    ...jest.requireActual('@react-navigation/native'),
+    useNavigation: () => ({
+      navigate: jest.fn(),
+    }),
   };
-
-  return (
-    <React.Fragment>
-      {error && <React.Fragment>{error}</React.Fragment>}
-      
-      {isLoading ? (
-        <React.Fragment testID="loading-indicator">Loading...</React.Fragment>
-      ) : (
-        <React.Fragment>
-          <React.Fragment>Email</React.Fragment>
-          <React.Fragment 
-            onChangeText={setEmail}
-            placeholder="Email"
-          />
-          
-          <React.Fragment>Contraseña</React.Fragment>
-          <React.Fragment 
-            onChangeText={setPassword}
-            placeholder="Contraseña"
-            secureTextEntry
-          />
-          
-          <React.Fragment onPress={handleLogin}>
-            Iniciar Sesión
-          </React.Fragment>
-          
-          <React.Fragment onPress={() => navigation.navigate('ForgotPassword')}>
-            ¿Olvidaste tu contraseña?
-          </React.Fragment>
-          
-          <React.Fragment onPress={() => navigation.navigate('Register')}>
-            ¿No tienes una cuenta? Regístrate
-          </React.Fragment>
-        </React.Fragment>
-      )}
-    </React.Fragment>
-  );
-};
-
-describe('Setup', () => {
-  it('setup file is loaded', () => {
-    expect(true).toBe(true);
-  });
 });
+
+// Mock de las acciones de Redux
+jest.mock('../../store/slices/authSlice', () => ({
+  loginUser: jest.fn(),
+}));
+
+// Configuración correcta de redux-mock-store
+const middlewares = [];
+const mockStore = configureStore(middlewares);
 
 describe('LoginScreen', () => {
-  // Configuración común para las pruebas
-  const mockDispatch = jest.fn();
-  const mockNavigate = jest.fn();
-  
+  let store;
+  let navigation;
+
   beforeEach(() => {
-    // Resetear los mocks antes de cada prueba
+    // Configuración del store con estado inicial
+    store = mockStore({
+      auth: {
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        error: null,
+      },
+    });
+
+    // Mock de la navegación
+    navigation = {
+      navigate: jest.fn(),
+    };
+
+    // Resetear los mocks entre pruebas
     jest.clearAllMocks();
-    
-    // Configurar los mocks
-    (useDispatch as jest.Mock).mockReturnValue(mockDispatch);
-    (useNavigation as jest.Mock).mockReturnValue({ navigate: mockNavigate });
-    (useSelector as jest.Mock).mockImplementation((selector) => {
-      // Mock del estado para useSelector
-      const mockState = {
-        auth: {
-          isLoading: false,
-          error: null,
-          user: null,
-        },
-      };
-      return selector(mockState);
-    });
   });
 
-  it('renderiza correctamente', () => {
-    const { getByText } = render(<SimplifiedLoginScreen />);
-    
-    // Verificar que los elementos principales están presentes
-    expect(getByText('Email')).toBeTruthy();
-    expect(getByText('Contraseña')).toBeTruthy();
-    expect(getByText('Iniciar Sesión')).toBeTruthy();
+  test('renderiza correctamente', () => {
+    const { getByText, getByPlaceholderText } = render(
+      <Provider store={store}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
+    // Verificar elementos clave en la pantalla
+    expect(getByText('Iniciar sesión')).toBeTruthy();
+    expect(getByPlaceholderText('Ingresa tu correo electrónico')).toBeTruthy();
+    expect(getByPlaceholderText('Ingresa tu contraseña')).toBeTruthy();
     expect(getByText('¿Olvidaste tu contraseña?')).toBeTruthy();
-    expect(getByText('¿No tienes una cuenta? Regístrate')).toBeTruthy();
+    expect(getByText('¿No tienes una cuenta?')).toBeTruthy();
+    expect(getByText('Regístrate')).toBeTruthy();
   });
 
-  it('muestra mensaje de error cuando está presente en el estado', () => {
-    // Configurar el selector para devolver un error
-    (useSelector as jest.Mock).mockImplementation((selector) => {
-      const mockState = {
-        auth: {
-          isLoading: false,
-          error: 'Error de autenticación',
-          user: null,
-        },
-      };
-      return selector(mockState);
+  test('muestra mensaje de error cuando está presente en el estado', () => {
+    const errorStore = mockStore({
+      auth: {
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+        error: 'Credenciales inválidas',
+      },
     });
-    
-    const { getByText } = render(<SimplifiedLoginScreen />);
-    
-    // Verificar que el mensaje de error se muestra
-    expect(getByText('Error de autenticación')).toBeTruthy();
+
+    const { getByText } = render(
+      <Provider store={errorStore}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
+    expect(getByText('Credenciales inválidas')).toBeTruthy();
   });
 
-  it('muestra indicador de carga durante el proceso de login', () => {
-    // Configurar el selector para indicar que está cargando
-    (useSelector as jest.Mock).mockImplementation((selector) => {
-      const mockState = {
-        auth: {
-          isLoading: true,
-          error: null,
-          user: null,
-        },
-      };
-      return selector(mockState);
+  test('muestra indicador de carga durante el proceso de login', () => {
+    const loadingStore = mockStore({
+      auth: {
+        user: null,
+        isAuthenticated: false,
+        loading: true,
+        error: null,
+      },
     });
-    
-    const { getByTestId } = render(<SimplifiedLoginScreen />);
-    
-    // Verificar que el indicador de carga se muestra
+
+    const { getByTestId } = render(
+      <Provider store={loadingStore}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
     expect(getByTestId('loading-indicator')).toBeTruthy();
   });
 
-  it('llama a la acción loginUser con las credenciales correctas', async () => {
-    const { getByText, getByPlaceholderText } = render(<SimplifiedLoginScreen />);
-    
-    // Simular la entrada de credenciales
-    fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
-    fireEvent.changeText(getByPlaceholderText('Contraseña'), 'password123');
-    
-    // Simular el clic en el botón de inicio de sesión
-    fireEvent.press(getByText('Iniciar Sesión'));
-    
-    // Verificar que se llamó a dispatch con los argumentos correctos
+  test('llama a la acción loginUser con las credenciales correctas', async () => {
+    const { getByPlaceholderText, getByText } = render(
+      <Provider store={store}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
+    // Simular entrada de usuario
+    fireEvent.changeText(
+      getByPlaceholderText('Ingresa tu correo electrónico'),
+      'usuario@ejemplo.com'
+    );
+    fireEvent.changeText(
+      getByPlaceholderText('Ingresa tu contraseña'),
+      'contraseña123'
+    );
+
+    // Simular clic en el botón de login
+    fireEvent.press(getByText('Iniciar sesión'));
+
+    // Verificar que se llamó a la acción con los parámetros correctos
     await waitFor(() => {
-      expect(mockDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'LOGIN_USER',
-          payload: {
-            email: 'test@example.com',
-            password: 'password123',
-          },
-        })
-      );
+      expect(loginUser).toHaveBeenCalledWith({
+        email: 'usuario@ejemplo.com',
+        password: 'contraseña123',
+      });
     });
   });
 
-  it('no llama a loginUser si los campos están vacíos', async () => {
-    const { getByText } = render(<SimplifiedLoginScreen />);
-    
-    // Simular el clic en el botón de inicio de sesión sin ingresar credenciales
-    fireEvent.press(getByText('Iniciar Sesión'));
-    
-    // Verificar que no se llamó a dispatch
+  test('no llama a loginUser si los campos están vacíos', async () => {
+    const { getByText } = render(
+      <Provider store={store}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
+    // Simular clic en el botón de login sin completar campos
+    fireEvent.press(getByText('Iniciar sesión'));
+
+    // Verificar que no se llamó a la acción
     await waitFor(() => {
-      expect(mockDispatch).not.toHaveBeenCalled();
+      expect(loginUser).not.toHaveBeenCalled();
     });
   });
 
-  it('navega a ForgotPassword al hacer clic en el enlace correspondiente', () => {
-    const { getByText } = render(<SimplifiedLoginScreen />);
-    
-    // Simular el clic en el enlace de olvidó contraseña
+  test('navega a ForgotPassword al hacer clic en el enlace correspondiente', () => {
+    const { getByText } = render(
+      <Provider store={store}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
+    // Simular clic en el enlace de olvidé mi contraseña
     fireEvent.press(getByText('¿Olvidaste tu contraseña?'));
-    
-    // Verificar que se llamó a navigate con el argumento correcto
-    expect(mockNavigate).toHaveBeenCalledWith('ForgotPassword');
+
+    // Verificar que se navegó a la pantalla correcta
+    expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword');
   });
 
-  it('navega a Register al hacer clic en el enlace de registro', () => {
-    const { getByText } = render(<SimplifiedLoginScreen />);
-    
-    // Simular el clic en el enlace de registro
-    fireEvent.press(getByText('¿No tienes una cuenta? Regístrate'));
-    
-    // Verificar que se llamó a navigate con el argumento correcto
-    expect(mockNavigate).toHaveBeenCalledWith('Register');
+  test('navega a Register al hacer clic en el enlace de registro', () => {
+    const { getByText } = render(
+      <Provider store={store}>
+        <LoginScreen navigation={navigation} />
+      </Provider>
+    );
+
+    // Simular clic en el enlace de registro
+    fireEvent.press(getByText('Regístrate'));
+
+    // Verificar que se navegó a la pantalla correcta
+    expect(navigation.navigate).toHaveBeenCalledWith('Register');
   });
 }); 

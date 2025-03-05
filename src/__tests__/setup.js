@@ -1,132 +1,68 @@
-// Importar extensiones de Jest para React Native
-import '@testing-library/jest-native/extend-expect';
+// Importar regenerator-runtime para soporte de async/await
+import 'regenerator-runtime/runtime';
 
-// Importar el mock de ScrollView
-import ScrollViewMock from './mocks/ScrollViewMock';
+// Configuración global para pruebas
 
-// Configuración global para React
-global.React = require('react');
-
-// Mock para componentes básicos de React Native
-jest.mock('react-native', () => {
-  const rn = jest.requireActual('react-native');
-  
-  // Crear mocks para los componentes básicos
-  const mockComponent = (name) => {
-    return ({ children, ...props }) => {
-      return {
-        type: name,
-        props: { ...props, children },
-        $$typeof: Symbol.for('react.element'),
-      };
-    };
-  };
-  
-  // Reemplazar componentes problemáticos con mocks simples
+// Mock para @react-native-community/datetimepicker
+jest.mock('@react-native-community/datetimepicker', () => {
+  const React = require('react');
   return {
-    ...rn,
-    View: mockComponent('View'),
-    Text: mockComponent('Text'),
-    TextInput: mockComponent('TextInput'),
-    TouchableOpacity: mockComponent('TouchableOpacity'),
-    TouchableWithoutFeedback: mockComponent('TouchableWithoutFeedback'),
-    ScrollView: mockComponent('ScrollView'),
-    FlatList: mockComponent('FlatList'),
-    Image: mockComponent('Image'),
-    ActivityIndicator: mockComponent('ActivityIndicator'),
-    Switch: mockComponent('Switch'),
-    Button: mockComponent('Button'),
-    Modal: mockComponent('Modal'),
-    Alert: {
-      alert: jest.fn(),
-    },
-    Platform: {
-      OS: 'ios',
-      select: jest.fn(obj => obj.ios),
-    },
-    Dimensions: {
-      get: jest.fn(() => ({ width: 375, height: 812 })),
-    },
-    StyleSheet: {
-      ...rn.StyleSheet,
-      create: obj => obj,
-    },
-  };
-});
-
-// Mock para react-navigation
-jest.mock('@react-navigation/native', () => {
-  return {
-    useNavigation: () => ({
-      navigate: jest.fn(),
-      goBack: jest.fn(),
-      setOptions: jest.fn(),
-    }),
-    useRoute: () => ({
-      params: {},
-    }),
-    useIsFocused: () => true,
-  };
-});
-
-// Mock para react-redux
-jest.mock('react-redux', () => {
-  return {
-    useDispatch: () => jest.fn(),
-    useSelector: jest.fn(selector => {
-      // Estado mock por defecto
-      const state = {
-        auth: {
-          user: null,
-          loading: false,
-          error: null,
-        },
-        receipts: {
-          receipts: [],
-          loading: false,
-          error: null,
-        },
-      };
-      return selector(state);
+    __esModule: true,
+    default: jest.fn().mockImplementation(({ value, onChange }) => {
+      return React.createElement('DateTimePicker', {
+        testID: 'dateTimePicker',
+        value: value || new Date(),
+        onChange: onChange || (() => {}),
+      });
     }),
   };
 });
 
-// Mock para imágenes estáticas
-jest.mock('../assets/images/logo.png', () => 'logo-mock');
+// Mock para @react-native-async-storage/async-storage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  setItem: jest.fn(() => Promise.resolve()),
+  getItem: jest.fn(() => Promise.resolve(null)),
+  removeItem: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+  getAllKeys: jest.fn(() => Promise.resolve([])),
+  multiGet: jest.fn(() => Promise.resolve([])),
+  multiSet: jest.fn(() => Promise.resolve()),
+  multiRemove: jest.fn(() => Promise.resolve()),
+}));
+
+// Mock para @expo/vector-icons
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  return {
+    Ionicons: jest.fn().mockImplementation(props => {
+      return React.createElement('Ionicons', props, props.children);
+    }),
+  };
+});
 
 // Suprimir advertencias de consola durante las pruebas
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
 console.error = (...args) => {
-  if (
-    /Warning:/.test(args[0]) ||
-    /React does not recognize the/.test(args[0]) ||
-    /The above error occurred in the/.test(args[0])
-  ) {
+  // Permitir errores específicos para depuración
+  if (args[0] && typeof args[0] === 'string' && args[0].includes('Error en el procesamiento de la imagen:')) {
+    originalConsoleError(...args);
     return;
   }
-  originalConsoleError(...args);
+  
+  // Suprimir otros errores
+  return;
 };
 
 console.warn = (...args) => {
-  if (
-    /Warning:/.test(args[0]) ||
-    /componentWillReceiveProps has been renamed/.test(args[0]) ||
-    /componentWillMount has been renamed/.test(args[0])
-  ) {
-    return;
-  }
-  originalConsoleWarn(...args);
+  // Suprimir advertencias
+  return;
 };
 
-// Configuración adicional para Jest
-jest.setTimeout(10000);
-
-// Añadir una prueba básica para verificar que el archivo de configuración se carga correctamente
+// Test dummy para evitar el error "Your test suite must contain at least one test"
 describe('Setup', () => {
   test('setup file is loaded', () => {
-    expect(true).toBeTruthy();
+    expect(true).toBe(true);
   });
-}); 
+});

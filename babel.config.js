@@ -1,18 +1,13 @@
-module.exports = {
-  presets: ['module:metro-react-native-babel-preset'],
-  plugins: [
-    [
-      '@babel/plugin-transform-runtime',
-      {
-        helpers: true,
-        regenerator: true,
-      },
+module.exports = function(api) {
+  api.cache(true);
+  return {
+    presets: [
+      ['babel-preset-expo', { jsxRuntime: 'automatic' }]
     ],
-    ["@babel/plugin-transform-class-properties", { "loose": true }]
-  ],
-  env: {
-    test: {
-      plugins: ['@babel/plugin-transform-modules-commonjs'],
-    },
-  },
+    plugins: [
+      'react-native-reanimated/plugin',
+      '@babel/plugin-transform-export-namespace-from',
+      '@babel/plugin-proposal-export-namespace-from'
+    ]
+  };
 }; 
