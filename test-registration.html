@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Registro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prueba de Registro</h1>
+    <form id="registrationForm">
+        <div class="form-group">
+            <label for="email">Correo Electrónico:</label>
+            <input type="email" id="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" required>
+        </div>
+        <div class="form-group">
+            <label for="firstName">Nombre:</label>
+            <input type="text" id="firstName" required>
+        </div>
+        <div class="form-group">
+            <label for="lastName">Apellido:</label>
+            <input type="text" id="lastName" required>
+        </div>
+        <button type="submit">Registrar</button>
+    </form>
+    <div id="result"></div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Inicializar el cliente de Supabase
+        const supabaseUrl = 'https://izcuyqehwvnstcaqfmod.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Y3V5cWVod3Zuc3RjYXFmbW9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk1OTI0MzcsImV4cCI6MjAyNTE2ODQzN30.Rl-AB9iBnwYUFXq8FjqRDUCEjz0g58XrJqwjJYYtZXk';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = 'Registrando usuario...';
+            
+            try {
+                // Registrar usuario en Supabase Auth
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            first_name: firstName,
+                            last_name: lastName,
+                            role: 'user'
+                        }
+                    }
+                });
+                
+                if (error) throw error;
+                
+                // Verificar si el usuario se creó correctamente
+                resultDiv.innerHTML = `
+                    <h3>Usuario registrado correctamente</h3>
+                    <p>ID: ${data.user?.id || 'No disponible'}</p>
+                    <p>Email: ${data.user?.email || 'No disponible'}</p>
+                    <p>Email confirmado: ${data.user?.email_confirmed_at ? 'Sí' : 'No'}</p>
+                    <p>Creado: ${data.user?.created_at || 'No disponible'}</p>
+                `;
+                
+                // Esperar 5 segundos y verificar si el email fue confirmado
+                setTimeout(async () => {
+                    try {
+                        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+                        
+                        if (sessionError) throw sessionError;
+                        
+                        if (sessionData && sessionData.session) {
+                            const { data: userData, error: userError } = await supabase.auth.getUser();
+                            
+                            if (userError) throw userError;
+                            
+                            resultDiv.innerHTML += `
+                                <h3>Estado actualizado</h3>
+                                <p>Email confirmado: ${userData.user?.email_confirmed_at ? 'Sí' : 'No'}</p>
+                            `;
+                        }
+                    } catch (verifyError) {
+                        resultDiv.innerHTML += `
+                            <h3>Error al verificar estado</h3>
+                            <p>${verifyError.message || 'Error desconocido'}</p>
+                        `;
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Error al registrar usuario</h3>
+                    <p>${error.message || 'Error desconocido'}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

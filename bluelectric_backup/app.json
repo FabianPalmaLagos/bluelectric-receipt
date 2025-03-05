@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "bluelectric",
+    "slug": "bluelectric",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "bluelectric",
+    "plugins": [
+      "./plugins/withAndroidVerifiedLinksWorkaround",
+      "./plugins/withRemoveHttpSchemeFromIntentFilters"
+    ],
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bluelectric.app",
+      "associatedDomains": [
+        "applinks:bluelectric.app",
+        "applinks:izcuyqehwvnstcaqfmod.supabase.co"
+      ]
+    },
+    "android": {
+      "package": "com.bluelectric.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "izcuyqehwvnstcaqfmod.supabase.co",
+              "pathPrefix": "/auth/v1/verify"
+            },
+            {
+              "scheme": "https",
+              "host": "izcuyqehwvnstcaqfmod.supabase.co",
+              "pathPrefix": "/auth/v1/callback"
+            },
+            {
+              "scheme": "bluelectric",
+              "host": "*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

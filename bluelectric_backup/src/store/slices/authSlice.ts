@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { supabase } from '../../api/supabase';
 import { User, UserRole } from '../../types';
-import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY } from '../../api/supabaseConfig';
 
 interface AuthState {
   user: User | null;
@@ -77,8 +75,8 @@ export const registerUser = createAsyncThunk(
         email,
         password,
         options: {
-          // Deshabilitamos la verificación de email
-          emailRedirectTo: undefined,
+          // URL de redirección modificada para mejor compatibilidad con Android
+          emailRedirectTo: 'https://izcuyqehwvnstcaqfmod.supabase.co/auth/v1/verify?redirect_to=bluelectric://login',
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -89,10 +87,27 @@ export const registerUser = createAsyncThunk(
 
       if (error) throw error;
 
-      // Como la función Edge de auto-confirm-email ahora se encarga de confirmar el email
-      // y crear el perfil de usuario, ya no necesitamos hacerlo aquí.
-      // Solo esperamos un poco para dar tiempo a que se procese el webhook
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        // Crear perfil de usuario en la tabla de perfiles
+        // Usamos un bloque try/catch específico para que si falla la creación del perfil,
+        // al menos el usuario pueda registrarse
+        const { error: profileError } = await supabase.from('profiles').insert([
+          {
+            id: data.user?.id,
+            first_name: firstName,
+            last_name: lastName,
+            role,
+          },
+        ]);
+
+        if (profileError) {
+          console.error('Error al crear perfil:', profileError.message);
+          // Continuamos el flujo a pesar del error en la creación del perfil
+        }
+      } catch (profileError) {
+        console.error('Error al crear perfil:', profileError);
+        // Continuamos el flujo a pesar del error en la creación del perfil
+      }
 
       return {
         id: data.user?.id,
@@ -176,10 +191,9 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(registerUser.fulfilled, (state, action: PayloadAction<User>) => {
+    builder.addCase(registerUser.fulfilled, (state) => {
       state.loading = false;
-      state.user = action.payload;
-      state.isAuthenticated = true;
+      // No establecemos el usuario ni isAuthenticated aquí porque necesitamos confirmación por email
     });
     builder.addCase(registerUser.rejected, (state, action) => {
       state.loading = false;
