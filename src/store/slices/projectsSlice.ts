@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { supabase } from '../../api/supabase';
 import { Project, Category } from '../../types';
+import { db, numberToStringId, stringToNumberId } from '../../utils/db/exports';
 
 interface ProjectsState {
   projects: Project[];
@@ -23,16 +23,14 @@ const initialState: ProjectsState = {
 // Thunks para operaciones asíncronas
 export const fetchProjects = createAsyncThunk('projects/fetchProjects', async (_, { rejectWithValue }) => {
   try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const data = await db.query(
+      'SELECT * FROM projects ORDER BY created_at DESC',
+      []
+    );
 
-    if (error) throw error;
-
-    // Transformar los datos de snake_case a camelCase
+    // Transformar los datos
     return data.map((project: any) => ({
-      id: project.id,
+      id: numberToStringId(project.id),
       name: project.name,
       description: project.description,
       createdAt: project.created_at,
@@ -47,17 +45,22 @@ export const fetchProjectById = createAsyncThunk(
   'projects/fetchProjectById',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single();
+      const data = await db.query(
+        'SELECT * FROM projects WHERE id = ? LIMIT 1',
+        [stringToNumberId(projectId)]
+      );
 
-      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Proyecto no encontrado');
+      }
 
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
+        id: numberToStringId(data[0].id),
+        name: data[0].name,
+        description: data[0].description,
+        createdAt: data[0].created_at,
+        updatedAt: data[0].updated_at,
       } as Project;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -72,20 +75,23 @@ export const createProject = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert([{ name, description }])
-        .select();
+      const now = new Date().toISOString();
+      const projectData = {
+        name,
+        description,
+        created_at: now,
+        updated_at: now
+      };
 
-      if (error) throw error;
+      const projectId = await db.insert('projects', projectData);
 
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return {
-        id: data[0].id,
-        name: data[0].name,
-        description: data[0].description,
-        createdAt: data[0].created_at,
-        updatedAt: data[0].updated_at,
+        id: numberToStringId(projectId),
+        name,
+        description,
+        createdAt: now,
+        updatedAt: now,
       } as Project;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -100,21 +106,36 @@ export const updateProject = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .update({ name, description })
-        .eq('id', id)
-        .select();
+      const now = new Date().toISOString();
+      const updateData = {
+        name,
+        description,
+        updated_at: now
+      };
 
-      if (error) throw error;
+      await db.update(
+        'projects',
+        updateData,
+        { id: stringToNumberId(id) }
+      );
 
-      // Transformar los datos de snake_case a camelCase
+      // Obtener el proyecto actualizado
+      const updated = await db.query(
+        'SELECT * FROM projects WHERE id = ? LIMIT 1',
+        [stringToNumberId(id)]
+      );
+
+      if (!updated || updated.length === 0) {
+        throw new Error('No se pudo actualizar el proyecto');
+      }
+
+      // Transformar los datos
       return {
-        id: data[0].id,
-        name: data[0].name,
-        description: data[0].description,
-        createdAt: data[0].created_at,
-        updatedAt: data[0].updated_at,
+        id: numberToStringId(updated[0].id),
+        name: updated[0].name,
+        description: updated[0].description,
+        createdAt: updated[0].created_at,
+        updatedAt: updated[0].updated_at,
       } as Project;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -126,9 +147,10 @@ export const deleteProject = createAsyncThunk(
   'projects/deleteProject',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', projectId);
-
-      if (error) throw error;
+      await db.delete(
+        'projects',
+        { id: stringToNumberId(projectId) }
+      );
 
       return projectId;
     } catch (error: any) {
@@ -141,18 +163,16 @@ export const fetchCategoriesByProject = createAsyncThunk(
   'projects/fetchCategoriesByProject',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('project_id', projectId);
+      const data = await db.query(
+        'SELECT * FROM categories WHERE project_id = ?',
+        [stringToNumberId(projectId)]
+      );
 
-      if (error) throw error;
-
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return data.map((category: any) => ({
-        id: category.id,
+        id: numberToStringId(category.id),
         name: category.name,
-        projectId: category.project_id,
+        projectId: numberToStringId(category.project_id),
       })) as Category[];
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -167,18 +187,18 @@ export const createCategory = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([{ name, project_id: projectId }])
-        .select();
+      const categoryData = {
+        name,
+        project_id: stringToNumberId(projectId)
+      };
 
-      if (error) throw error;
+      const categoryId = await db.insert('categories', categoryData);
 
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return {
-        id: data[0].id,
-        name: data[0].name,
-        projectId: data[0].project_id,
+        id: numberToStringId(categoryId),
+        name,
+        projectId,
       } as Category;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -193,19 +213,27 @@ export const updateCategory = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .update({ name })
-        .eq('id', id)
-        .select();
+      await db.update(
+        'categories',
+        { name },
+        { id: stringToNumberId(id) }
+      );
 
-      if (error) throw error;
+      // Obtener la categoría actualizada
+      const updated = await db.query(
+        'SELECT * FROM categories WHERE id = ? LIMIT 1',
+        [stringToNumberId(id)]
+      );
 
-      // Transformar los datos de snake_case a camelCase
+      if (!updated || updated.length === 0) {
+        throw new Error('No se pudo actualizar la categoría');
+      }
+
+      // Transformar los datos
       return {
-        id: data[0].id,
-        name: data[0].name,
-        projectId: data[0].project_id,
+        id: numberToStringId(updated[0].id),
+        name: updated[0].name,
+        projectId: numberToStringId(updated[0].project_id),
       } as Category;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -217,9 +245,10 @@ export const deleteCategory = createAsyncThunk(
   'projects/deleteCategory',
   async (categoryId: string, { rejectWithValue }) => {
     try {
-      const { error } = await supabase.from('categories').delete().eq('id', categoryId);
-
-      if (error) throw error;
+      await db.delete(
+        'categories',
+        { id: stringToNumberId(categoryId) }
+      );
 
       return categoryId;
     } catch (error: any) {

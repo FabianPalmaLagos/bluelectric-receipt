@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { AuthNavigationProp } from '../../navigation/types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants/theme';
-import { supabase } from '../../api/supabase';
 
 interface ForgotPasswordScreenProps {
   navigation: AuthNavigationProp<'ForgotPassword'>;
@@ -47,16 +46,9 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
     setIsSuccess(false);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'bluelectricreceipt://reset-password',
-      });
-
-      if (error) {
-        throw error;
-      }
-
+      // En modo offline, simplemente informamos que esta función no está disponible
       setIsSuccess(true);
-      setMessage('Se ha enviado un enlace de recuperación a tu correo electrónico');
+      setMessage('La recuperación de contraseña no está disponible en modo offline. Por favor, contacta al administrador.');
     } catch (error: any) {
       setIsSuccess(false);
       setMessage(error.message || 'Ha ocurrido un error. Por favor, intenta de nuevo.');

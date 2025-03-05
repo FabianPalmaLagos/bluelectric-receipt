@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndi
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { ProjectStackParamList } from '../../navigation/types';
-import { supabase } from '../../api/supabase';
 import { COLORS } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { db, numberToStringId, stringToNumberId } from '../../utils/db/exports';
 
 type ProjectCategoriesScreenNavigationProp = StackNavigationProp<
   ProjectStackParamList,
@@ -54,13 +54,11 @@ const ProjectCategoriesScreen: React.FC<Props> = ({ navigation, route }) => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('name');
+      const data = await db.query(
+        'SELECT * FROM categories WHERE project_id = ? ORDER BY name',
+        [stringToNumberId(projectId)]
+      );
 
-      if (error) throw error;
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -98,12 +96,11 @@ const ProjectCategoriesScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress: async () => {
             try {
               setLoading(true);
-              const { error } = await supabase
-                .from('categories')
-                .delete()
-                .eq('id', categoryId);
-
-              if (error) throw error;
+              await db.delete(
+                'categories',
+                { id: categoryId }
+              );
+              
               // Refrescar la lista después de eliminar
               fetchCategories();
             } catch (error) {

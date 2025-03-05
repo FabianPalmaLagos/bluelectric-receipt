@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { supabase } from '../../api/supabase';
 import { User, UserRole } from '../../types';
-import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY } from '../../api/supabaseConfig';
+import { db, numberToStringId } from '../../utils/db/exports';
 
 interface AuthState {
   user: User | null;
@@ -18,35 +16,45 @@ const initialState: AuthState = {
   error: null,
 };
 
+// Función auxiliar para obtener usuario por email
+const getUserByEmail = async (email: string): Promise<any> => {
+  try {
+    // Asegurar que la búsqueda no sea sensible a mayúsculas/minúsculas
+    const users = await db.query(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1',
+      [email]
+    );
+    return users.length > 0 ? users[0] : null;
+  } catch (error) {
+    console.error('Error al buscar usuario por email:', error);
+    return null;
+  }
+};
+
 // Thunks para operaciones asíncronas
 export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const user = await getUserByEmail(email);
+      
+      if (!user) {
+        throw new Error('Usuario no encontrado');
+      }
 
-      if (error) throw error;
+      // En una implementación real, aquí verificarías el hash de la contraseña
+      // Por ahora, solo verificamos que el email exista
+      
+      const userData: User = {
+        id: numberToStringId(user.id),
+        email: user.email,
+        role: user.rol as UserRole,
+        firstName: user.nombre.split(' ')[0],
+        lastName: user.nombre.split(' ').slice(1).join(' '),
+        createdAt: user.fecha_alta,
+      };
 
-      // Obtener datos adicionales del usuario desde la tabla de perfiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user?.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      return {
-        id: data.user?.id,
-        email: data.user?.email,
-        role: profileData.role as UserRole,
-        firstName: profileData.first_name,
-        lastName: profileData.last_name,
-        createdAt: data.user?.created_at,
-      } as User;
+      return userData;
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
@@ -72,36 +80,44 @@ export const registerUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      // Registrar usuario en Supabase Auth con opciones específicas para móvil
-      const { data, error } = await supabase.auth.signUp({
+      // Verificar si el usuario ya existe
+      const existingUser = await getUserByEmail(email);
+      if (existingUser) {
+        throw new Error('El email ya está registrado');
+      }
+
+      // Convertir el rol al formato esperado por la base de datos (según la restricción CHECK)
+      const dbRole = role === UserRole.ADMIN ? 'ADMINISTRADOR' : 'TRABAJADOR';
+
+      // Crear nuevo usuario
+      const userData = {
+        nombre: `${firstName} ${lastName}`,
         email,
-        password,
-        options: {
-          // Deshabilitamos la verificación de email
-          emailRedirectTo: undefined,
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            role: role,
-          }
+        rol: dbRole, // Usar el rol convertido
+        fecha_alta: new Date().toISOString(),
+      };
+
+      try {
+        const userId = await db.insert('users', userData);
+
+        const newUser: User = {
+          id: numberToStringId(userId),
+          email,
+          role,
+          firstName,
+          lastName,
+          createdAt: userData.fecha_alta,
+        };
+
+        return newUser;
+      } catch (dbError: any) {
+        // Manejar específicamente el error de email duplicado
+        if (dbError.message && dbError.message.includes('UNIQUE constraint failed: users.email')) {
+          throw new Error('El email ya está registrado. Por favor utiliza otro correo electrónico.');
         }
-      });
-
-      if (error) throw error;
-
-      // Como la función Edge de auto-confirm-email ahora se encarga de confirmar el email
-      // y crear el perfil de usuario, ya no necesitamos hacerlo aquí.
-      // Solo esperamos un poco para dar tiempo a que se procese el webhook
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      return {
-        id: data.user?.id,
-        email: data.user?.email,
-        role,
-        firstName,
-        lastName,
-        createdAt: data.user?.created_at,
-      } as User;
+        // Otros errores de base de datos
+        throw dbError;
+      }
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
@@ -110,8 +126,7 @@ export const registerUser = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    // En la implementación local, solo necesitamos limpiar el estado
     return null;
   } catch (error: any) {
     return rejectWithValue(error.message);
@@ -120,28 +135,9 @@ export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWith
 
 export const getCurrentUser = createAsyncThunk('auth/getCurrentUser', async (_, { rejectWithValue }) => {
   try {
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error) throw error;
-    if (!data.session) return null;
-
-    // Obtener datos adicionales del usuario desde la tabla de perfiles
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.session.user.id)
-      .single();
-
-    if (profileError) throw profileError;
-
-    return {
-      id: data.session.user.id,
-      email: data.session.user.email,
-      role: profileData.role as UserRole,
-      firstName: profileData.first_name,
-      lastName: profileData.last_name,
-      createdAt: data.session.user.created_at,
-    } as User;
+    // En una implementación real, aquí verificarías una sesión local almacenada
+    // Por ahora, retornamos null para indicar que no hay sesión activa
+    return null;
   } catch (error: any) {
     return rejectWithValue(error.message);
   }

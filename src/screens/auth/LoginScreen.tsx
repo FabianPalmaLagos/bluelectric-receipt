@@ -16,9 +16,8 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { AuthNavigationProp } from '../../navigation/types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants/theme';
-import { loginUser } from '../../store/slices/authSlice';
+import { loginUser, clearError } from '../../store/slices/authSlice';
 import { RootState } from '../../store';
-import { supabase } from '../../api/supabase';
 
 interface LoginScreenProps {
   navigation: AuthNavigationProp<'Login'>;
@@ -54,7 +53,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setShowTokenInput(true);
   };
 
-  // Nueva función para validar token
+  // Nueva función para validar token - adaptada a modo offline
   const validateEmailToken = async () => {
     if (!validationToken || !email) {
       Alert.alert('Error', 'Por favor ingresa tu correo y el token de validación');
@@ -63,18 +62,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     setIsValidatingEmail(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: validationToken,
-        type: 'signup'
-      });
-
-      if (error) {
-        Alert.alert('Error', `No se pudo verificar tu correo: ${error.message}`);
-      } else {
-        Alert.alert('Éxito', 'Tu correo ha sido verificado correctamente. Ahora puedes iniciar sesión.');
-        setShowTokenInput(false);
-      }
+      // En modo offline, simplemente informamos que esta función no está disponible
+      Alert.alert(
+        'Información', 
+        'La validación de email no está disponible en modo offline. Por favor, contacta al administrador.'
+      );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Ocurrió un error durante la validación');
     } finally {
@@ -112,6 +104,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       </View>
     );
   };
+
+  // Limpiar error al montar el componente
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+
+  // Limpiar error al desmontar el componente
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   return (
     <KeyboardAvoidingView
@@ -213,7 +217,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               styles.registerText,
               colorScheme === 'dark' && styles.textDark
             ]}>¿No tienes una cuenta? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <TouchableOpacity onPress={() => {
+              dispatch(clearError());
+              navigation.navigate('Register');
+            }}>
               <Text style={styles.registerLink}>Regístrate</Text>
             </TouchableOpacity>
           </View>

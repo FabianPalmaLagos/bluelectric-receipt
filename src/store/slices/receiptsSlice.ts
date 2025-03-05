@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { supabase } from '../../api/supabase';
 import { Receipt, ReceiptStatus } from '../../types';
+import { db, numberToStringId, stringToNumberId } from '../../utils/db/exports';
 
 interface ReceiptsState {
   receipts: Receipt[];
@@ -23,20 +23,17 @@ export const fetchReceipts = createAsyncThunk(
   'receipts/fetchReceipts',
   async (userId: string, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const data = await db.query(
+        'SELECT * FROM receipts WHERE user_id = ? ORDER BY created_at DESC',
+        [stringToNumberId(userId)]
+      );
 
-      if (error) throw error;
-
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return data.map((receipt: any) => ({
-        id: receipt.id,
-        userId: receipt.user_id,
-        projectId: receipt.project_id,
-        categoryId: receipt.category_id,
+        id: numberToStringId(receipt.id),
+        userId: numberToStringId(receipt.user_id),
+        projectId: numberToStringId(receipt.project_id),
+        categoryId: receipt.category_id ? numberToStringId(receipt.category_id) : null,
         amount: receipt.amount,
         date: receipt.date,
         merchant: receipt.merchant,
@@ -57,20 +54,17 @@ export const fetchReceiptsByProject = createAsyncThunk(
   'receipts/fetchReceiptsByProject',
   async (projectId: string, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false });
+      const data = await db.query(
+        'SELECT * FROM receipts WHERE project_id = ? ORDER BY created_at DESC',
+        [stringToNumberId(projectId)]
+      );
 
-      if (error) throw error;
-
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return data.map((receipt: any) => ({
-        id: receipt.id,
-        userId: receipt.user_id,
-        projectId: receipt.project_id,
-        categoryId: receipt.category_id,
+        id: numberToStringId(receipt.id),
+        userId: numberToStringId(receipt.user_id),
+        projectId: numberToStringId(receipt.project_id),
+        categoryId: receipt.category_id ? numberToStringId(receipt.category_id) : null,
         amount: receipt.amount,
         date: receipt.date,
         merchant: receipt.merchant,
@@ -91,29 +85,30 @@ export const fetchReceiptById = createAsyncThunk(
   'receipts/fetchReceiptById',
   async (receiptId: string, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .select('*')
-        .eq('id', receiptId)
-        .single();
+      const data = await db.query(
+        'SELECT * FROM receipts WHERE id = ? LIMIT 1',
+        [stringToNumberId(receiptId)]
+      );
 
-      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Recibo no encontrado');
+      }
 
-      // Transformar los datos de snake_case a camelCase
+      // Transformar los datos
       return {
-        id: data.id,
-        userId: data.user_id,
-        projectId: data.project_id,
-        categoryId: data.category_id,
-        amount: data.amount,
-        date: data.date,
-        merchant: data.merchant,
-        description: data.description,
-        imageUrl: data.image_url,
-        status: data.status,
-        rejectionReason: data.rejection_reason,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
+        id: numberToStringId(data[0].id),
+        userId: numberToStringId(data[0].user_id),
+        projectId: numberToStringId(data[0].project_id),
+        categoryId: data[0].category_id ? numberToStringId(data[0].category_id) : null,
+        amount: data[0].amount,
+        date: data[0].date,
+        merchant: data[0].merchant,
+        description: data[0].description,
+        imageUrl: data[0].image_url,
+        status: data[0].status,
+        rejectionReason: data[0].rejection_reason,
+        createdAt: data[0].created_at,
+        updatedAt: data[0].updated_at,
       } as Receipt;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -129,13 +124,8 @@ export const createReceipt = (receipt: Omit<Receipt, 'id'>) => ({
     offline: {
       // Lo que se hace cuando estamos desconectados
       effect: {
-        url: `${process.env.SUPABASE_URL}/rest/v1/receipts`,
+        url: 'offline/receipts/create',
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-          'apikey': process.env.SUPABASE_ANON_KEY,
-        },
         body: JSON.stringify({
           user_id: receipt.userId,
           project_id: receipt.projectId,
@@ -163,20 +153,15 @@ export const addReceipt = (receiptData: any) => ({
   payload: {
     ...receiptData,
     tempId: `temp-${Date.now()}`, // Generamos un ID temporal
-    isOffline: false, // Por defecto no está en modo offline
+    isOffline: true, // Ahora siempre está en modo offline
     status: 'pending', // Estado inicial
   },
   meta: {
     offline: {
       // Lo que se hace cuando estamos desconectados
       effect: {
-        url: `${process.env.SUPABASE_URL}/rest/v1/receipts`,
+        url: 'offline/receipts/add',
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-          'apikey': process.env.SUPABASE_ANON_KEY,
-        },
         body: JSON.stringify({
           user_id: receiptData.userId,
           project_id: receiptData.projectId,
@@ -201,39 +186,50 @@ export const updateReceipt = createAsyncThunk(
   'receipts/updateReceipt',
   async (receipt: Receipt, { rejectWithValue }) => {
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .update({
-          project_id: receipt.projectId,
-          category_id: receipt.categoryId,
-          amount: receipt.amount,
-          date: receipt.date,
-          merchant: receipt.merchant,
-          description: receipt.description,
-          image_url: receipt.imageUrl,
-          status: receipt.status,
-          rejection_reason: receipt.rejectionReason,
-        })
-        .eq('id', receipt.id)
-        .select();
+      const updateData = {
+        project_id: stringToNumberId(receipt.projectId),
+        category_id: receipt.categoryId ? stringToNumberId(receipt.categoryId) : null,
+        amount: receipt.amount,
+        date: receipt.date,
+        merchant: receipt.merchant,
+        description: receipt.description,
+        image_url: receipt.imageUrl,
+        status: receipt.status,
+        rejection_reason: receipt.rejectionReason,
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
+      await db.update(
+        'receipts',
+        updateData,
+        { id: stringToNumberId(receipt.id) }
+      );
 
-      // Transformar los datos de snake_case a camelCase
+      // Obtener el registro actualizado
+      const updated = await db.query(
+        'SELECT * FROM receipts WHERE id = ? LIMIT 1',
+        [stringToNumberId(receipt.id)]
+      );
+
+      if (!updated || updated.length === 0) {
+        throw new Error('No se pudo actualizar el recibo');
+      }
+
+      // Transformar los datos
       return {
-        id: data[0].id,
-        userId: data[0].user_id,
-        projectId: data[0].project_id,
-        categoryId: data[0].category_id,
-        amount: data[0].amount,
-        date: data[0].date,
-        merchant: data[0].merchant,
-        description: data[0].description,
-        imageUrl: data[0].image_url,
-        status: data[0].status,
-        rejectionReason: data[0].rejection_reason,
-        createdAt: data[0].created_at,
-        updatedAt: data[0].updated_at,
+        id: numberToStringId(updated[0].id),
+        userId: numberToStringId(updated[0].user_id),
+        projectId: numberToStringId(updated[0].project_id),
+        categoryId: updated[0].category_id ? numberToStringId(updated[0].category_id) : null,
+        amount: updated[0].amount,
+        date: updated[0].date,
+        merchant: updated[0].merchant,
+        description: updated[0].description,
+        imageUrl: updated[0].image_url,
+        status: updated[0].status,
+        rejectionReason: updated[0].rejection_reason,
+        createdAt: updated[0].created_at,
+        updatedAt: updated[0].updated_at,
       } as Receipt;
     } catch (error: any) {
       return rejectWithValue(error.message);
@@ -248,23 +244,23 @@ export const updateReceiptStatus = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const { data, error } = await supabase
-        .from('receipts')
-        .update({
+      const { data, error } = await db.update(
+        'receipts',
+        {
           status,
           rejection_reason: rejectionReason,
-        })
-        .eq('id', receiptId)
-        .select();
+        },
+        { id: stringToNumberId(receiptId) }
+      );
 
       if (error) throw error;
 
       // Transformar los datos de snake_case a camelCase
       return {
-        id: data[0].id,
-        userId: data[0].user_id,
-        projectId: data[0].project_id,
-        categoryId: data[0].category_id,
+        id: numberToStringId(data[0].id),
+        userId: numberToStringId(data[0].user_id),
+        projectId: numberToStringId(data[0].project_id),
+        categoryId: data[0].category_id ? numberToStringId(data[0].category_id) : null,
         amount: data[0].amount,
         date: data[0].date,
         merchant: data[0].merchant,
@@ -285,7 +281,10 @@ export const deleteReceipt = createAsyncThunk(
   'receipts/deleteReceipt',
   async (receiptId: string, { rejectWithValue }) => {
     try {
-      const { error } = await supabase.from('receipts').delete().eq('id', receiptId);
+      const { error } = await db.delete(
+        'receipts',
+        { id: stringToNumberId(receiptId) }
+      );
 
       if (error) throw error;
 

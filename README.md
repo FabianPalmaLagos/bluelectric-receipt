@@ -108,4 +108,140 @@ Este proyecto está licenciado bajo la Licencia MIT - ver el archivo LICENSE par
 
 ## Contacto
 
-Para cualquier consulta o sugerencia, por favor contactar a [tu-email@ejemplo.com](mailto:tu-email@ejemplo.com). 
+Para cualquier consulta o sugerencia, por favor contactar a [tu-email@ejemplo.com](mailto:tu-email@ejemplo.com).
+
+## Inicialización de la Base de Datos
+
+Para inicializar la base de datos con las tablas y datos iniciales necesarios, sigue estos pasos:
+
+1. Instala las dependencias:
+   ```
+   npm install
+   ```
+
+2. Ejecuta el script de inicialización:
+   ```
+   npm run init-db
+   ```
+
+Este proceso creará una base de datos SQLite (`bluelectric.db`) con las siguientes tablas:
+- `users`: Usuarios del sistema (administradores y trabajadores)
+- `projects`: Proyectos de la empresa
+- `categories`: Categorías para clasificar los recibos
+- `receipts`: Recibos registrados por los trabajadores
+- `comments`: Comentarios sobre los recibos
+- `migrations`: Registro de migraciones ejecutadas
+
+### Datos iniciales
+
+El script de inicialización crea automáticamente:
+
+- **Usuarios**:
+  - Admin (admin@bluelectric.cl) - Rol: ADMINISTRADOR
+  - Trabajador (trabajador@bluelectric.cl) - Rol: TRABAJADOR
+
+- **Categorías**:
+  - Materiales
+  - Comida
+  - Alojamiento
+  - Transporte
+  - Herramientas
+  - Otros
+
+- **Proyectos**:
+  - Proyecto Demo (creado manualmente para pruebas)
+
+## Estructura de la Base de Datos
+
+### Tabla `users`
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  rol TEXT NOT NULL CHECK (rol IN ('ADMINISTRADOR', 'TRABAJADOR')) COLLATE NOCASE,
+  foto_perfil TEXT,
+  fecha_alta TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+### Tabla `projects`
+```sql
+CREATE TABLE IF NOT EXISTS projects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  descripcion TEXT,
+  fecha_creacion TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+### Tabla `categories`
+```sql
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL UNIQUE,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+### Tabla `receipts`
+```sql
+CREATE TABLE IF NOT EXISTS receipts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  monto REAL NOT NULL,
+  fecha TEXT NOT NULL,
+  comercio TEXT NOT NULL,
+  imagenUri TEXT NOT NULL,
+  estado TEXT NOT NULL CHECK (estado IN ('pendiente', 'aprobado', 'rechazado')) COLLATE NOCASE,
+  motivo_rechazo TEXT,
+  usuario_id INTEGER NOT NULL,
+  proyecto_id INTEGER NOT NULL,
+  categoria_id INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE,
+  FOREIGN KEY (proyecto_id) REFERENCES projects (id) ON DELETE CASCADE,
+  FOREIGN KEY (categoria_id) REFERENCES categories (id) ON DELETE CASCADE
+)
+```
+
+### Tabla `comments`
+```sql
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  texto TEXT NOT NULL,
+  fecha TEXT NOT NULL,
+  recibo_id INTEGER NOT NULL,
+  usuario_id INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (recibo_id) REFERENCES receipts (id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE
+)
+```
+
+## Consultas útiles
+
+Para verificar los datos en la base de datos, puedes usar los siguientes comandos:
+
+```bash
+# Listar todas las tablas
+sqlite3 bluelectric.db ".tables"
+
+# Ver usuarios
+sqlite3 bluelectric.db "SELECT * FROM users;"
+
+# Ver categorías
+sqlite3 bluelectric.db "SELECT * FROM categories;"
+
+# Ver proyectos
+sqlite3 bluelectric.db "SELECT * FROM projects;"
+
+# Ver migraciones
+sqlite3 bluelectric.db "SELECT * FROM migrations;"
+``` 

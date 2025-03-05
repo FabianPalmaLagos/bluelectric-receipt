@@ -65,6 +65,18 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     prevLoadingRef.current = loading;
   }, [loading, error, isRegistering, role, navigation, dispatch]);
 
+  // Limpiar error al montar el componente
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+  
+  // Limpiar error al desmontar el componente
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -213,7 +225,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>¿Ya tienes una cuenta? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity onPress={() => {
+              dispatch(clearError());
+              navigation.navigate('Login');
+            }}>
               <Text style={styles.loginLink}>Iniciar sesión</Text>
             </TouchableOpacity>
           </View>
