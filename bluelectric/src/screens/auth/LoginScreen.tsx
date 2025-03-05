@@ -11,12 +11,14 @@ import {
   ScrollView,
   ActivityIndicator,
   useColorScheme,
+  Alert,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AuthNavigationProp } from '../../navigation/types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../constants/theme';
 import { loginUser } from '../../store/slices/authSlice';
 import { RootState } from '../../store';
+import { supabase } from '../../api/supabase';
 
 interface LoginScreenProps {
   navigation: AuthNavigationProp<'Login'>;
@@ -25,6 +27,9 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
+  const [validationToken, setValidationToken] = useState('');
+  const [showTokenInput, setShowTokenInput] = useState(false);
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const colorScheme = useColorScheme();
@@ -42,6 +47,70 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     // @ts-ignore - Ignoramos el error de tipado por ahora
     dispatch(loginUser({ email, password }));
+  };
+
+  // Nueva función para manejar la validación manual
+  const handleManualValidation = () => {
+    setShowTokenInput(true);
+  };
+
+  // Nueva función para validar token
+  const validateEmailToken = async () => {
+    if (!validationToken || !email) {
+      Alert.alert('Error', 'Por favor ingresa tu correo y el token de validación');
+      return;
+    }
+
+    setIsValidatingEmail(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: validationToken,
+        type: 'signup'
+      });
+
+      if (error) {
+        Alert.alert('Error', `No se pudo verificar tu correo: ${error.message}`);
+      } else {
+        Alert.alert('Éxito', 'Tu correo ha sido verificado correctamente. Ahora puedes iniciar sesión.');
+        setShowTokenInput(false);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Ocurrió un error durante la validación');
+    } finally {
+      setIsValidatingEmail(false);
+    }
+  };
+
+  // Agregar UI para validación manual
+  const renderTokenInput = () => {
+    if (!showTokenInput) return null;
+    
+    return (
+      <View style={styles.tokenContainer}>
+        <Text style={styles.tokenTitle}>Validación manual</Text>
+        <Text style={styles.tokenDescription}>
+          Introduce el token de validación que recibiste en el correo de confirmación.
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Token de validación"
+          value={validationToken}
+          onChangeText={setValidationToken}
+        />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={validateEmailToken}
+          disabled={isValidatingEmail}
+        >
+          {isValidatingEmail ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Validar cuenta</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
@@ -126,6 +195,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               <Text style={styles.loginButtonText}>Iniciar sesión</Text>
             )}
           </TouchableOpacity>
+
+          {/* Botón de validación manual */}
+          <TouchableOpacity
+            style={styles.validationButton}
+            onPress={handleManualValidation}
+          >
+            <Text style={styles.validationText}>
+              ¿Problemas con la confirmación? Validar manualmente
+            </Text>
+          </TouchableOpacity>
+
+          {renderTokenInput()}
 
           <View style={styles.registerContainer}>
             <Text style={[
@@ -237,6 +318,42 @@ const styles = StyleSheet.create({
   registerLink: {
     color: COLORS.primary.medium,
     fontSize: FONT_SIZE.sm,
+    fontWeight: 'bold',
+  },
+  validationButton: {
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  validationText: {
+    color: '#3498db',
+    textAlign: 'center',
+  },
+  tokenContainer: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  tokenTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  tokenDescription: {
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#666',
+  },
+  button: {
+    backgroundColor: '#3498db',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

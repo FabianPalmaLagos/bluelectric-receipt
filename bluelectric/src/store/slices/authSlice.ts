@@ -75,7 +75,8 @@ export const registerUser = createAsyncThunk(
         email,
         password,
         options: {
-          emailRedirectTo: 'bluelectric://login', // Esquema personalizado para la app
+          // URL de redirección modificada para mejor compatibilidad con Android
+          emailRedirectTo: 'https://izcuyqehwvnstcaqfmod.supabase.co/auth/v1/verify?redirect_to=bluelectric://login',
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -86,17 +87,27 @@ export const registerUser = createAsyncThunk(
 
       if (error) throw error;
 
-      // Crear perfil de usuario en la tabla de perfiles
-      const { error: profileError } = await supabase.from('profiles').insert([
-        {
-          id: data.user?.id,
-          first_name: firstName,
-          last_name: lastName,
-          role,
-        },
-      ]);
+      try {
+        // Crear perfil de usuario en la tabla de perfiles
+        // Usamos un bloque try/catch específico para que si falla la creación del perfil,
+        // al menos el usuario pueda registrarse
+        const { error: profileError } = await supabase.from('profiles').insert([
+          {
+            id: data.user?.id,
+            first_name: firstName,
+            last_name: lastName,
+            role,
+          },
+        ]);
 
-      if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Error al crear perfil:', profileError.message);
+          // Continuamos el flujo a pesar del error en la creación del perfil
+        }
+      } catch (profileError) {
+        console.error('Error al crear perfil:', profileError);
+        // Continuamos el flujo a pesar del error en la creación del perfil
+      }
 
       return {
         id: data.user?.id,
